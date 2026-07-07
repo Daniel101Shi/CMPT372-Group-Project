@@ -1,2 +1,2 @@
 # CMPT372-Group-Project
-Note taking application!
+Lopo!! The saviour of SFU!!!
