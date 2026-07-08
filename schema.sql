@@ -52,8 +52,7 @@ CREATE TABLE packs (
     owner_id INT REFERENCES users(user_id) ON DELETE CASCADE,
     group_name VARCHAR(100) NOT NULL,
     semester VARCHAR(10) NOT NULL,
-    year INT NOT NULL,
-    CONSTRAINT unique_user_pack UNIQUE (pack_id, owner_id)
+    year INT NOT NULL
 );
 
 -- many to many relationship, someone needs to double check this one
