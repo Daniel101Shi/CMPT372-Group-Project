@@ -28,13 +28,37 @@ CREATE TABLE course_collections (
 );
 
 -- reg entity
-CREATE TABLE saved_courses ();
+CREATE TABLE saved_courses (
+    course_id SERIAL PRIMARY KEY,
+    department VARCHAR(10) NOT NULL,
+    course_number VARCHAR(10) NOT NULL,
+    section VARCHAR(10) NOT NULL,
+    CONSTRAINT unique_course_offering UNIQUE (department, course_number, section)
+);
 
 -- many to many relationship
-CREATE TABLE course_collection_items ();
+CREATE TABLE course_collection_items (
+    user_id INT,
+    semester VARCHAR(10),
+    year INT,
+    course_id INT REFERENCES saved_courses(course_id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, semester, year, course_id),
+    FOREIGN KEY (user_id, semester, year) REFERENCES course_collections(user_id, semester, year) ON DELETE CASCADE
+);
 
 -- weak entity, owned by user
-CREATE TABLE packs ();
+CREATE TABLE packs (
+    pack_id SERIAL PRIMARY KEY,
+    owner_id INT REFERENCES users(user_id) ON DELETE CASCADE,
+    group_name VARCHAR(100) NOT NULL,
+    semester VARCHAR(10) NOT NULL,
+    year INT NOT NULL,
+    CONSTRAINT unique_user_pack UNIQUE (pack_id, owner_id)
+);
 
--- many to many relationship
-CREATE TABLE pack_members ();
+-- many to many relationship, someone needs to double check this one
+CREATE TABLE pack_members (
+    pack_id INT REFERENCES packs(pack_id) ON DELETE CASCADE,
+    user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
+    PRIMARY KEY (pack_id, user_id)
+);
