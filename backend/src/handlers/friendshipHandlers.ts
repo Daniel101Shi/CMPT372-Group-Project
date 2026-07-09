@@ -151,3 +151,51 @@ export async function acceptFriendRequest(req: Request, res: Response) {
     });
   }
 }
+
+export async function deleteFriendship(req: Request, res: Response) {
+  const ids = getFriendshipIds(req, res);
+
+  if (!ids) {
+    return;
+  }
+
+  const { requesterId, recipientId } = ids;
+
+  try {
+    const existingFriendshipResult = await pool.query(
+      `
+        SELECT user_id_1, user_id_2, pending
+        FROM friendships
+        WHERE (user_id_1 = $1 AND user_id_2 = $2)
+           OR (user_id_1 = $2 AND user_id_2 = $1)
+      `,
+      [requesterId, recipientId],
+    );
+
+    if (!existingFriendshipResult.rowCount || existingFriendshipResult.rowCount === 0) {
+      return res.status(404).json({
+        error: "Friendship not found.",
+      });
+    }
+
+    const deletedFriendshipResult = await pool.query(
+      `
+        DELETE FROM friendships
+        WHERE (user_id_1 = $1 AND user_id_2 = $2)
+           OR (user_id_1 = $2 AND user_id_2 = $1)
+        RETURNING user_id_1, user_id_2, pending
+      `,
+      [requesterId, recipientId],
+    );
+
+    return res.status(200).json({
+      message: "Friendship deleted successfully.",
+      friendship: deletedFriendshipResult.rows[0],
+    });
+  } catch (error) {
+    console.error("Failed to delete friendship:", error);
+    return res.status(500).json({
+      error: "Internal server error.",
+    });
+  }
+}

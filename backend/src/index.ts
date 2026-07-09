@@ -4,6 +4,7 @@ import express from "express";
 
 import {
   acceptFriendRequest,
+  deleteFriendship,
   sendFriendRequest,
 } from "./handlers/friendshipHandlers.js";
 
@@ -22,6 +23,8 @@ app.get("/health", (_req, res) => {
 app.post("/api/friendship/request", sendFriendRequest);
 
 app.patch("/api/friendships/accept", acceptFriendRequest);
+
+app.delete("/api/friendships", deleteFriendship);
 
 app.listen(port, () => {
   console.log(`Backend listening on port ${port}`);
