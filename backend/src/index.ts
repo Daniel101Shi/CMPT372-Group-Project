@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import express from "express";
 
 import friendshipRoutes from "./routes/friendshipRoutes.js";
+import packRoutes from "./routes/packRoutes.js"
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api", friendshipRoutes);
+app.use("/api", packRoutes);
 
 app.listen(port, () => {
   console.log(`Backend listening on port ${port}`);

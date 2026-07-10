@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 
-import { pool } from "../db.js";
+import { pool } from "../db/db.js";
 
 type FriendshipBody = {
   requesterId?: number;
