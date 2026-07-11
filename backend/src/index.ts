@@ -4,6 +4,10 @@ import express from "express";
 
 import friendshipRoutes from "./routes/friendshipRoutes.js";
 
+// getUserCourse
+import getUserCourseRoutes from "./routes/getUserCourseRoutes.js";
+
+
 dotenv.config();
 
 const app = express();
@@ -17,6 +21,10 @@ app.get("/health", (_req, res) => {
 });
 
 app.use("/api", friendshipRoutes);
+
+// getUserCourse
+app.use("/api", getUserCourseRoutes);
+
 
 app.listen(port, () => {
   console.log(`Backend listening on port ${port}`);
