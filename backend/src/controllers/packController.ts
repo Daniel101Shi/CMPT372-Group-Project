@@ -6,7 +6,16 @@ export const createPack = async(req: Request, res: Response): Promise<Response>=
     try{
         const new_pack = req.body.new_pack as Pack;
         const friends : number[] = req.body.friends;
-        
+        if(!new_pack){
+            return res.status(400).json({
+                message: "new_pack is required"
+            });
+        }
+        if(!Array.isArray(friends)){
+            return res.status(400).json({
+                message: "friends is required"
+            });
+        }
         const response : Response = await packHelpers.createPack(new_pack, friends)
             .then((pack_id: PackID)=>{
                 console.log("Succesfully created pack.");

@@ -3,25 +3,15 @@ import { type QueryResult, type PoolClient} from "pg";
 import { type PackID, type Pack, type PackMember } from "../types/Pack.js";
 
 const addFriendsToPack = async(client : PoolClient, pack_id: number, friends: number[])=>{
-    try{
 
-        const q = 
-        `
-        INSERT INTO packs (pack_id, user_id)
-        VALUES ($1, $2)
-        `;
+    const q = 
+    `
+    INSERT INTO pack_members (pack_id, user_id)
+    VALUES ($1, $2)
+    `;
     
     for(const id of friends)
-        await client.query(q, [
-            pack_id, 
-            id
-        ]);
-    }catch(error){
-        if(error instanceof Error)
-            console.error(error.message);
-        else
-            console.error("Unknown error");
-    }
+        await client.query(q, [pack_id, id]);
 }
 
 const packHelpers = {
@@ -38,7 +28,7 @@ const packHelpers = {
         const client = (await pool.connect()) as PoolClient;
         try{
             await client.query("BEGIN");
-            const result = (await pool.query(packCreationQuery, [
+            const result = (await client.query(packCreationQuery, [
                 pack.owner_id,
                 pack.group_name,
                 pack.semester,
