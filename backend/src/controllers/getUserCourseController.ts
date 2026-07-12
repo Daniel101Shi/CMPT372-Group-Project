@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 
-import { pool } from "../db.js";
+import { pool } from "../db/db.js";
 
 const CURRENT_SEMESTER = "2026summer";
 
