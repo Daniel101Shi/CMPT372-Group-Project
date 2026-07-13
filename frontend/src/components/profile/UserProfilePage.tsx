@@ -37,6 +37,13 @@ type ViewedProfile = {
   canViewContactInfo: boolean;
 };
 
+type SearchUser = {
+  user_id: number;
+  username: string;
+  packCount: number;
+  isOwnProfile: boolean;
+};
+
 const API_URL = import.meta.env.VITE_API_URL || "";
 
 const emptyFriendships: FriendshipDashboard = {
@@ -60,6 +67,11 @@ export const UserProfilePage: React.FC = () => {
   const [friendshipsError, setFriendshipsError] = useState<string | null>(null);
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
   const [isRelationshipUpdating, setIsRelationshipUpdating] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
+  const [isSearchLoading, setIsSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const viewedUserId = userId ? Number(userId) : user?.user_id ?? null;
 
@@ -162,6 +174,65 @@ export const UserProfilePage: React.FC = () => {
 
     load();
   }, [user, viewedUserId]);
+
+  useEffect(() => {
+    if (!user) {
+      setSearchResults([]);
+      setIsSearchLoading(false);
+      setSearchError(null);
+      return;
+    }
+
+    const trimmedQuery = searchQuery.trim();
+
+    if (trimmedQuery.length < 1) {
+      setSearchResults([]);
+      setIsSearchLoading(false);
+      setSearchError(null);
+      return;
+    }
+
+    let isCancelled = false;
+    setIsSearchLoading(true);
+    setSearchError(null);
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await fetch(
+          `${API_URL}/api/users/search?query=${encodeURIComponent(trimmedQuery)}`,
+          {
+            method: "GET",
+            credentials: "include",
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to search users.");
+        }
+
+        if (!isCancelled) {
+          setSearchResults(data.users || []);
+        }
+      } catch (error) {
+        console.error("User search error:", error);
+        if (!isCancelled) {
+          setSearchResults([]);
+          setSearchError(error instanceof Error ? error.message : "Failed to search users.");
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsSearchLoading(false);
+        }
+      }
+    }, 180);
+
+    return () => {
+      isCancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchQuery, user]);
 
   const updateRelationship = async (
     endpoint: string,
@@ -269,6 +340,14 @@ export const UserProfilePage: React.FC = () => {
     } finally {
       setIsRelationshipUpdating(false);
     }
+  };
+
+  const handleSelectSearchUser = (result: SearchUser) => {
+    setSearchQuery("");
+    setSearchResults([]);
+    setSearchError(null);
+    setIsSearchOpen(false);
+    navigate(result.isOwnProfile ? "/userprofile" : `/userprofile/${result.user_id}`);
   };
 
   if (loading || isProfileLoading) {
@@ -398,9 +477,9 @@ export const UserProfilePage: React.FC = () => {
                   >
                     Open schedule builder
                   </Link>
-                  <button type="button" onClick={handleLogout} style={styles.secondaryButton}>
-                    Log out
-                  </button>
+                <button type="button" onClick={handleLogout} style={styles.secondaryButton}>
+                  Log out
+                </button>
                 </>
               ) : (
                 <>
@@ -429,6 +508,65 @@ export const UserProfilePage: React.FC = () => {
                     Back to my profile
                   </Link>
                 </>
+              )}
+            </div>
+          </div>
+
+          <div style={styles.searchArea}>
+            <div style={styles.searchLabelRow}>
+              <span style={styles.searchLabel}>Find students</span>
+              <span style={styles.searchHint}>Search by username</span>
+            </div>
+            <div style={styles.searchShell}>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => {
+                  setSearchQuery(event.target.value);
+                  setIsSearchOpen(true);
+                }}
+                onFocus={() => setIsSearchOpen(true)}
+                placeholder="Search usernames..."
+                style={styles.searchInput}
+              />
+              {(isSearchOpen || searchQuery.trim().length > 0) && (
+                <div style={styles.searchDropdown}>
+                  {isSearchLoading ? (
+                    <div style={styles.searchState}>Searching...</div>
+                  ) : searchError ? (
+                    <div style={styles.searchState}>{searchError}</div>
+                  ) : searchQuery.trim().length < 1 ? (
+                    <div style={styles.searchState}>
+                      Start typing and matching students will appear here.
+                    </div>
+                  ) : searchResults.length === 0 ? (
+                    <div style={styles.searchState}>No students matched that username.</div>
+                  ) : (
+                    searchResults.map((result) => (
+                      <button
+                        key={result.user_id}
+                        type="button"
+                        onClick={() => handleSelectSearchUser(result)}
+                        style={styles.searchResultButton}
+                      >
+                        <div style={styles.searchResultIdentity}>
+                          <div style={styles.searchAvatar}>
+                            {result.username.slice(0, 1).toUpperCase()}
+                          </div>
+                          <div style={styles.searchResultMeta}>
+                            <strong style={styles.searchResultName}>{result.username}</strong>
+                            <span style={styles.searchResultSubtext}>
+                              {result.isOwnProfile
+                                ? "Your profile"
+                                : `${result.packCount} ${result.packCount === 1 ? "pack" : "packs"}`}
+                            </span>
+                          </div>
+                        </div>
+                        <span style={styles.searchResultChevron}>View</span>
+                      </button>
+                    ))
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -755,6 +893,113 @@ const styles: Record<string, React.CSSProperties> = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
     gap: "14px",
+  },
+  searchArea: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  searchLabelRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+    flexWrap: "wrap",
+  },
+  searchLabel: {
+    fontSize: "14px",
+    fontWeight: 800,
+    color: "#0f172a",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+  },
+  searchHint: {
+    fontSize: "13px",
+    color: "#64748b",
+  },
+  searchShell: {
+    position: "relative",
+  },
+  searchInput: {
+    width: "100%",
+    minHeight: "52px",
+    padding: "0 16px",
+    borderRadius: "14px",
+    border: "1px solid #cbd5e1",
+    backgroundColor: "#ffffff",
+    color: "#0f172a",
+    fontSize: "15px",
+    outline: "none",
+    boxSizing: "border-box",
+  },
+  searchDropdown: {
+    position: "absolute",
+    top: "calc(100% + 10px)",
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    borderRadius: "18px",
+    backgroundColor: "#ffffff",
+    border: "1px solid rgba(148, 163, 184, 0.24)",
+    boxShadow: "0 22px 48px rgba(15, 23, 42, 0.16)",
+    overflow: "hidden",
+  },
+  searchState: {
+    padding: "16px 18px",
+    fontSize: "14px",
+    color: "#64748b",
+  },
+  searchResultButton: {
+    width: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "16px",
+    padding: "14px 18px",
+    border: "none",
+    borderBottom: "1px solid #eef2ff",
+    backgroundColor: "#ffffff",
+    cursor: "pointer",
+    textAlign: "left",
+  },
+  searchResultIdentity: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    minWidth: 0,
+  },
+  searchAvatar: {
+    width: "40px",
+    height: "40px",
+    borderRadius: "999px",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    background: "linear-gradient(135deg, #2563eb 0%, #60a5fa 100%)",
+    color: "#ffffff",
+    fontSize: "15px",
+    fontWeight: 800,
+    flexShrink: 0,
+  },
+  searchResultMeta: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "4px",
+    minWidth: 0,
+  },
+  searchResultName: {
+    fontSize: "15px",
+    color: "#0f172a",
+  },
+  searchResultSubtext: {
+    fontSize: "13px",
+    color: "#64748b",
+  },
+  searchResultChevron: {
+    fontSize: "13px",
+    fontWeight: 700,
+    color: "#2563eb",
+    flexShrink: 0,
   },
   statCard: {
     padding: "18px",

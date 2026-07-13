@@ -22,6 +22,61 @@ function getSessionUserId(req: Request, res: Response) {
   return userId;
 }
 
+export async function searchUsers(req: Request, res: Response) {
+  const sessionUserId = getSessionUserId(req, res);
+
+  if (!sessionUserId) {
+    return;
+  }
+
+  const rawQuery = typeof req.query.query === "string" ? req.query.query : "";
+  const query = rawQuery.trim();
+
+  if (query.length < 1) {
+    return res.status(200).json({ users: [] });
+  }
+
+  try {
+    const usersResult = await pool.query(
+      `
+        SELECT
+          u.user_id,
+          u.username,
+          (
+            SELECT COUNT(*)
+            FROM packs p
+            WHERE p.owner_id = u.user_id
+          )::int AS pack_count
+        FROM users u
+        WHERE u.username ILIKE $1
+        ORDER BY
+          CASE
+            WHEN LOWER(u.username) = LOWER($2) THEN 0
+            WHEN LOWER(u.username) LIKE LOWER($2) || '%' THEN 1
+            ELSE 2
+          END,
+          u.username ASC
+        LIMIT 8
+      `,
+      [`%${query}%`, query],
+    );
+
+    return res.status(200).json({
+      users: usersResult.rows.map((row) => ({
+        user_id: row.user_id,
+        username: row.username,
+        packCount: row.pack_count,
+        isOwnProfile: row.user_id === sessionUserId,
+      })),
+    });
+  } catch (error) {
+    console.error("Failed to search users:", error);
+    return res.status(500).json({
+      error: "Internal server error.",
+    });
+  }
+}
+
 export async function getUserProfile(req: Request, res: Response) {
   const sessionUserId = getSessionUserId(req, res);
 
