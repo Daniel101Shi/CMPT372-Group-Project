@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
 import bcrypt from "bcrypt";
-import { pool } from "../db.js"
+import { pool } from "../db/db.js";
 
 declare module "express-session" {
   interface SessionData {

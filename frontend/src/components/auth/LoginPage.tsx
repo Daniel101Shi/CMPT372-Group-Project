@@ -20,7 +20,7 @@ export const LoginPage: React.FC = () => {
     setIsSubmitting(false);
 
     if (result.success) {
-      navigate("/");
+      navigate("/userprofile");
     } else {
       setError(result.error || "Invalid login credentials.");
     }

@@ -50,6 +50,6 @@ app.use("/api", packRoutes);
 app.use("/api", getUserCourseRoutes);
 
 
-app.listen(port, () => {
+app.listen(port, "0.0.0.0", () => {
   console.log(`Backend listening on port ${port}`);
 });
