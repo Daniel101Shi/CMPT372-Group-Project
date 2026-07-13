@@ -32,7 +32,7 @@ export const RegisterPage: React.FC = () => {
     setIsSubmitting(false);
 
     if (result.success) {
-      navigate("/");
+      navigate("/userprofile");
     } else {
       setError(result.error || "Failed to register.");
     }
