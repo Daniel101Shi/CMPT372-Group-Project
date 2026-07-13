@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+
 import { useAuth } from "../../context/AuthContext";
 
 type FriendshipUser = {
@@ -17,71 +18,72 @@ type FriendshipDashboard = {
 
 type FriendTab = "current" | "incoming" | "outgoing";
 
+type RelationshipStatus =
+  | "self"
+  | "none"
+  | "friends"
+  | "incoming_request"
+  | "outgoing_request";
+
+type ViewedProfile = {
+  user_id: number;
+  username: string;
+  contact_info?: string | null;
+  created_at?: string;
+  packCount: number;
+  friendsCount: number;
+  isOwnProfile: boolean;
+  relationshipStatus: RelationshipStatus;
+  canViewContactInfo: boolean;
+};
+
 const API_URL = import.meta.env.VITE_API_URL || "";
+
+const emptyFriendships: FriendshipDashboard = {
+  currentFriends: [],
+  incomingPendingRequests: [],
+  outgoingPendingRequests: [],
+};
 
 export const UserProfilePage: React.FC = () => {
   const { user, loading, logout } = useAuth();
   const navigate = useNavigate();
+  const { userId } = useParams();
+
+  const [profile, setProfile] = useState<ViewedProfile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [isProfileLoading, setIsProfileLoading] = useState(true);
+
   const [activeTab, setActiveTab] = useState<FriendTab>("current");
-  const [friendships, setFriendships] = useState<FriendshipDashboard>({
-    currentFriends: [],
-    incomingPendingRequests: [],
-    outgoingPendingRequests: [],
-  });
-  const [isFriendshipsLoading, setIsFriendshipsLoading] = useState(true);
+  const [friendships, setFriendships] = useState<FriendshipDashboard>(emptyFriendships);
+  const [isFriendshipsLoading, setIsFriendshipsLoading] = useState(false);
   const [friendshipsError, setFriendshipsError] = useState<string | null>(null);
   const [busyUserId, setBusyUserId] = useState<number | null>(null);
+  const [isRelationshipUpdating, setIsRelationshipUpdating] = useState(false);
+
+  const viewedUserId = userId ? Number(userId) : user?.user_id ?? null;
 
   const handleLogout = async () => {
     await logout();
     navigate("/", { replace: true });
   };
 
-  useEffect(() => {
-    if (!user) {
-      setFriendships({
-        currentFriends: [],
-        incomingPendingRequests: [],
-        outgoingPendingRequests: [],
-      });
-      setIsFriendshipsLoading(false);
-      return;
+  const fetchProfile = async (targetUserId: number) => {
+    const response = await fetch(`${API_URL}/api/users/${targetUserId}/profile`, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to load profile.");
     }
 
-    const loadFriendships = async () => {
-      setIsFriendshipsLoading(true);
-      setFriendshipsError(null);
+    return data.profile as ViewedProfile;
+  };
 
-      try {
-        const response = await fetch(`${API_URL}/api/friendships`, {
-          method: "GET",
-          credentials: "include",
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          setFriendshipsError(data.error || "Failed to load friendships.");
-          return;
-        }
-
-        setFriendships({
-          currentFriends: data.currentFriends || [],
-          incomingPendingRequests: data.incomingPendingRequests || [],
-          outgoingPendingRequests: data.outgoingPendingRequests || [],
-        });
-      } catch (error) {
-        console.error("Friendship dashboard error:", error);
-        setFriendshipsError("Could not load your friendship dashboard.");
-      } finally {
-        setIsFriendshipsLoading(false);
-      }
-    };
-
-    loadFriendships();
-  }, [user]);
-
-  const refreshFriendships = async () => {
+  const fetchFriendships = async () => {
     const response = await fetch(`${API_URL}/api/friendships`, {
       method: "GET",
       credentials: "include",
@@ -90,14 +92,94 @@ export const UserProfilePage: React.FC = () => {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || "Failed to refresh friendships.");
+      throw new Error(data.error || "Failed to load friendships.");
     }
 
-    setFriendships({
+    return {
       currentFriends: data.currentFriends || [],
       incomingPendingRequests: data.incomingPendingRequests || [],
       outgoingPendingRequests: data.outgoingPendingRequests || [],
+    } as FriendshipDashboard;
+  };
+
+  const refreshPageData = async () => {
+    if (!user || !viewedUserId) {
+      return;
+    }
+
+    const nextProfile = await fetchProfile(viewedUserId);
+    setProfile(nextProfile);
+
+    if (nextProfile.isOwnProfile) {
+      const nextFriendships = await fetchFriendships();
+      setFriendships(nextFriendships);
+    } else {
+      setFriendships(emptyFriendships);
+      setFriendshipsError(null);
+    }
+  };
+
+  useEffect(() => {
+    if (!user) {
+      setProfile(null);
+      setFriendships(emptyFriendships);
+      setIsProfileLoading(false);
+      return;
+    }
+
+    if (!viewedUserId || !Number.isInteger(viewedUserId) || viewedUserId <= 0) {
+      setProfile(null);
+      setProfileError("That profile does not exist.");
+      setIsProfileLoading(false);
+      return;
+    }
+
+    const load = async () => {
+      setIsProfileLoading(true);
+      setProfileError(null);
+      setFriendshipsError(null);
+
+      try {
+        const nextProfile = await fetchProfile(viewedUserId);
+        setProfile(nextProfile);
+
+        if (nextProfile.isOwnProfile) {
+          setIsFriendshipsLoading(true);
+          const nextFriendships = await fetchFriendships();
+          setFriendships(nextFriendships);
+        } else {
+          setFriendships(emptyFriendships);
+        }
+      } catch (error) {
+        console.error("Profile page load error:", error);
+        setProfile(null);
+        setProfileError(error instanceof Error ? error.message : "Failed to load profile.");
+      } finally {
+        setIsProfileLoading(false);
+        setIsFriendshipsLoading(false);
+      }
+    };
+
+    load();
+  }, [user, viewedUserId]);
+
+  const updateRelationship = async (
+    endpoint: string,
+    method: "POST" | "PATCH" | "DELETE",
+    body: Record<string, number>,
+  ) => {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(body),
     });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to update friendship.");
+    }
   };
 
   const handleAcceptRequest = async (requesterId: number) => {
@@ -107,32 +189,23 @@ export const UserProfilePage: React.FC = () => {
 
     setBusyUserId(requesterId);
     setFriendshipsError(null);
+    setProfileError(null);
 
     try {
-      const response = await fetch(`${API_URL}/api/friendships/accept`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          requesterId,
-          recipientId: user.user_id,
-        }),
+      await updateRelationship("/api/friendships/accept", "PATCH", {
+        requesterId,
+        recipientId: user.user_id,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to accept friendship request.");
-      }
-
-      await refreshFriendships();
+      await refreshPageData();
     } catch (error) {
       console.error("Accept friendship request error:", error);
-      setFriendshipsError(
-        error instanceof Error ? error.message : "Failed to accept friendship request.",
-      );
+      const message =
+        error instanceof Error ? error.message : "Failed to accept friendship request.";
+      setFriendshipsError(message);
+      setProfileError(message);
     } finally {
       setBusyUserId(null);
+      setIsRelationshipUpdating(false);
     }
   };
 
@@ -143,34 +216,62 @@ export const UserProfilePage: React.FC = () => {
 
     setBusyUserId(otherUserId);
     setFriendshipsError(null);
+    setProfileError(null);
+    setIsRelationshipUpdating(true);
 
     try {
-      const response = await fetch(`${API_URL}/api/friendships`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          requesterId: user.user_id,
-          recipientId: otherUserId,
-        }),
+      await updateRelationship("/api/friendships", "DELETE", {
+        requesterId: user.user_id,
+        recipientId: otherUserId,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to update friendship.");
-      }
-
-      await refreshFriendships();
+      await refreshPageData();
     } catch (error) {
       console.error("Delete friendship error:", error);
-      setFriendshipsError(error instanceof Error ? error.message : "Failed to update friendship.");
+      const message = error instanceof Error ? error.message : "Failed to update friendship.";
+      setFriendshipsError(message);
+      setProfileError(message);
     } finally {
       setBusyUserId(null);
+      setIsRelationshipUpdating(false);
     }
   };
 
-  if (loading) {
+  const handleProfileRelationshipAction = async () => {
+    if (!profile || !user || profile.isOwnProfile) {
+      return;
+    }
+
+    setIsRelationshipUpdating(true);
+    setProfileError(null);
+
+    try {
+      if (profile.relationshipStatus === "none") {
+        await updateRelationship("/api/friendship/request", "POST", {
+          requesterId: user.user_id,
+          recipientId: profile.user_id,
+        });
+      } else if (profile.relationshipStatus === "incoming_request") {
+        await updateRelationship("/api/friendships/accept", "PATCH", {
+          requesterId: profile.user_id,
+          recipientId: user.user_id,
+        });
+      } else {
+        await updateRelationship("/api/friendships", "DELETE", {
+          requesterId: user.user_id,
+          recipientId: profile.user_id,
+        });
+      }
+
+      await refreshPageData();
+    } catch (error) {
+      console.error("Profile relationship update error:", error);
+      setProfileError(error instanceof Error ? error.message : "Failed to update friendship.");
+    } finally {
+      setIsRelationshipUpdating(false);
+    }
+  };
+
+  if (loading || isProfileLoading) {
     return (
       <div style={styles.page}>
         <div style={styles.loadingCard}>
@@ -185,16 +286,14 @@ export const UserProfilePage: React.FC = () => {
       <div style={styles.page}>
         <div style={styles.emptyCard}>
           <span style={styles.badge}>Session required</span>
-          <h1 style={styles.emptyTitle}>Sign in to view your profile</h1>
+          <h1 style={styles.emptyTitle}>Sign in to view profiles</h1>
           <p style={styles.emptyText}>
-            Your profile page shows the account details tied to your current Lopo session.
+            Profile pages depend on your current Lopo session so we can show the right actions and
+            visibility.
           </p>
           <div style={styles.emptyActions}>
             <Link to="/" style={{ ...styles.primaryButton, ...styles.linkButton }}>
               Go to login
-            </Link>
-            <Link to="/register" style={{ ...styles.secondaryButton, ...styles.linkButton }}>
-              Create account
             </Link>
           </div>
         </div>
@@ -202,15 +301,34 @@ export const UserProfilePage: React.FC = () => {
     );
   }
 
-  const joinedDate = user.created_at
-    ? new Date(user.created_at).toLocaleDateString(undefined, {
+  if (!profile) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.emptyCard}>
+          <span style={styles.badge}>Profile unavailable</span>
+          <h1 style={styles.emptyTitle}>This profile could not be loaded</h1>
+          <p style={styles.emptyText}>{profileError || "Please try again."}</p>
+          <div style={styles.emptyActions}>
+            <Link
+              to="/userprofile"
+              style={{ ...styles.primaryButton, ...styles.linkButton }}
+            >
+              Back to my profile
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const joinedDate = profile.created_at
+    ? new Date(profile.created_at).toLocaleDateString(undefined, {
         year: "numeric",
         month: "long",
         day: "numeric",
       })
     : "Recently joined";
 
-  const hasContactInfo = Boolean(user.contact_info && user.contact_info.trim());
   const friendTabs: { id: FriendTab; label: string; count: number }[] = [
     { id: "current", label: "Current friends", count: friendships.currentFriends.length },
     {
@@ -232,180 +350,305 @@ export const UserProfilePage: React.FC = () => {
         ? friendships.incomingPendingRequests
         : friendships.outgoingPendingRequests;
 
+  const relationshipLabel =
+    profile.relationshipStatus === "self"
+      ? "Your account"
+      : profile.relationshipStatus === "friends"
+        ? "Friends"
+        : profile.relationshipStatus === "incoming_request"
+          ? "Incoming request"
+          : profile.relationshipStatus === "outgoing_request"
+            ? "Request sent"
+            : "Not connected";
+
+  const relationshipActionLabel =
+    profile.relationshipStatus === "none"
+      ? "Send friend request"
+      : profile.relationshipStatus === "incoming_request"
+        ? "Accept request"
+        : profile.relationshipStatus === "outgoing_request"
+          ? "Cancel request"
+          : "Remove friend";
+
   return (
     <div style={styles.page}>
       <div style={styles.shell}>
         <section style={styles.heroCard}>
           <div style={styles.heroContent}>
             <div>
-              <span style={styles.badge}>Lopo profile</span>
-              <h1 style={styles.heroTitle}>Welcome back, {user.username}</h1>
+              <span style={styles.badge}>
+                {profile.isOwnProfile ? "Your profile" : "Member profile"}
+              </span>
+              <h1 style={styles.heroTitle}>
+                {profile.isOwnProfile ? `Welcome back, ${profile.username}` : profile.username}
+              </h1>
               <p style={styles.heroText}>
-                Keep your account details in one place and jump back into schedule planning
-                whenever you need it.
+                {profile.isOwnProfile
+                  ? "Manage your account, check your packs, and keep track of who is already in your circle."
+                  : "See who this person is, how connected you are, and whether it makes sense to send or respond to a friend request."}
               </p>
             </div>
 
             <div style={styles.heroActions}>
-              <Link
-                to="/schedulebuilder"
-                style={{ ...styles.primaryButton, ...styles.linkButton }}
-              >
-                Open schedule builder
-              </Link>
-              <button type="button" onClick={handleLogout} style={styles.secondaryButton}>
-                Log out
-              </button>
+              {profile.isOwnProfile ? (
+                <>
+                  <Link
+                    to="/schedulebuilder"
+                    style={{ ...styles.primaryButton, ...styles.linkButton }}
+                  >
+                    Open schedule builder
+                  </Link>
+                  <button type="button" onClick={handleLogout} style={styles.secondaryButton}>
+                    Log out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleProfileRelationshipAction}
+                    disabled={isRelationshipUpdating}
+                    style={styles.primaryButton}
+                  >
+                    {isRelationshipUpdating ? "Updating..." : relationshipActionLabel}
+                  </button>
+                  {profile.relationshipStatus === "incoming_request" && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteFriendship(profile.user_id)}
+                      disabled={isRelationshipUpdating}
+                      style={styles.secondaryButton}
+                    >
+                      Decline
+                    </button>
+                  )}
+                  <Link
+                    to="/userprofile"
+                    style={{ ...styles.secondaryButton, ...styles.linkButton }}
+                  >
+                    Back to my profile
+                  </Link>
+                </>
+              )}
             </div>
           </div>
 
           <div style={styles.heroStats}>
             <div style={styles.statCard}>
-              <span style={styles.statLabel}>Username</span>
-              <strong style={styles.statValue}>@{user.username}</strong>
-            </div>
-            <div style={styles.statCard}>
-              <span style={styles.statLabel}>Contact</span>
-              <strong style={styles.statValue}>{hasContactInfo ? "Added" : "Missing"}</strong>
+              <span style={styles.statLabel}>Status</span>
+              <strong style={styles.statValue}>{relationshipLabel}</strong>
             </div>
             <div style={styles.statCard}>
               <span style={styles.statLabel}>Friends</span>
-              <strong style={styles.statValue}>{friendships.currentFriends.length}</strong>
+              <strong style={styles.statValue}>{profile.friendsCount}</strong>
+            </div>
+            <div style={styles.statCard}>
+              <span style={styles.statLabel}>Packs</span>
+              <strong style={styles.statValue}>{profile.packCount}</strong>
             </div>
           </div>
         </section>
 
+        {profileError && <div style={styles.errorBox}>{profileError}</div>}
+
         <section style={styles.grid}>
           <article style={styles.panel}>
             <div style={styles.panelHeader}>
-              <h2 style={styles.panelTitle}>Account details</h2>
+              <h2 style={styles.panelTitle}>
+                {profile.isOwnProfile ? "Account details" : "Profile details"}
+              </h2>
               <span style={styles.panelAccent} />
             </div>
 
             <div style={styles.detailList}>
               <div style={styles.detailRow}>
                 <span style={styles.detailLabel}>Username</span>
-                <span style={styles.detailValue}>{user.username}</span>
+                <span style={styles.detailValue}>{profile.username}</span>
               </div>
               <div style={styles.detailRow}>
                 <span style={styles.detailLabel}>Contact info</span>
                 <span style={styles.detailValue}>
-                  {hasContactInfo ? user.contact_info : "No contact info added yet"}
+                  {profile.canViewContactInfo
+                    ? profile.contact_info || "No contact info added"
+                    : "Hidden until you are friends"}
                 </span>
               </div>
               <div style={styles.detailRow}>
                 <span style={styles.detailLabel}>Joined</span>
                 <span style={styles.detailValue}>{joinedDate}</span>
               </div>
+              <div style={styles.detailRow}>
+                <span style={styles.detailLabel}>Owned packs</span>
+                <span style={styles.detailValue}>
+                  {profile.packCount} {profile.packCount === 1 ? "pack" : "packs"}
+                </span>
+              </div>
             </div>
           </article>
 
-          <article style={{ ...styles.panel, ...styles.dashboardPanel }}>
-            <div style={styles.panelHeader}>
-              <h2 style={styles.panelTitle}>Friends dashboard</h2>
-              <span style={styles.panelAccent} />
-            </div>
-
-            <div style={styles.tabList}>
-              {friendTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setActiveTab(tab.id)}
-                  style={{
-                    ...styles.tabButton,
-                    ...(activeTab === tab.id ? styles.activeTabButton : {}),
-                  }}
-                >
-                  <span>{tab.label}</span>
-                  <span style={styles.tabCount}>{tab.count}</span>
-                </button>
-              ))}
-            </div>
-
-            {friendshipsError && <div style={styles.errorBox}>{friendshipsError}</div>}
-
-            {isFriendshipsLoading ? (
-              <div style={styles.dashboardEmptyState}>
-                <p style={styles.dashboardEmptyTitle}>Loading friendship dashboard...</p>
+          {profile.isOwnProfile ? (
+            <article style={{ ...styles.panel, ...styles.dashboardPanel }}>
+              <div style={styles.panelHeader}>
+                <h2 style={styles.panelTitle}>Friends dashboard</h2>
+                <span style={styles.panelAccent} />
               </div>
-            ) : activeItems.length === 0 ? (
-              <div style={styles.dashboardEmptyState}>
-                <p style={styles.dashboardEmptyTitle}>
-                  {activeTab === "current" && "No current friends yet"}
-                  {activeTab === "incoming" && "No incoming requests"}
-                  {activeTab === "outgoing" && "No outgoing requests"}
-                </p>
-                <p style={styles.dashboardEmptyText}>
-                  {activeTab === "current" &&
-                    "Once you start connecting with people, your active friends will show up here."}
-                  {activeTab === "incoming" &&
-                    "New requests waiting for your response will appear in this tab."}
-                  {activeTab === "outgoing" &&
-                    "Requests you send to other users will stay here until they accept or you cancel them."}
-                </p>
-              </div>
-            ) : (
-              <div style={styles.friendList}>
-                {activeItems.map((friend) => (
-                  <div key={`${activeTab}-${friend.user_id}`} style={styles.friendCard}>
-                    <div style={styles.friendIdentity}>
-                      <div style={styles.avatarCircle}>
-                        {friend.username.slice(0, 1).toUpperCase()}
-                      </div>
-                      <div style={styles.friendMeta}>
-                        <strong style={styles.friendName}>{friend.username}</strong>
-                        <span style={styles.friendSubtext}>
-                          {friend.contact_info?.trim() || "No contact info added"}
-                        </span>
-                      </div>
-                    </div>
 
-                    <div style={styles.friendActions}>
-                      {activeTab === "incoming" ? (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleAcceptRequest(friend.user_id)}
-                            disabled={busyUserId === friend.user_id}
-                            style={styles.smallPrimaryButton}
-                          >
-                            {busyUserId === friend.user_id ? "Accepting..." : "Accept"}
-                          </button>
+              <div style={styles.tabList}>
+                {friendTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    style={{
+                      ...styles.tabButton,
+                      ...(activeTab === tab.id ? styles.activeTabButton : {}),
+                    }}
+                  >
+                    <span>{tab.label}</span>
+                    <span style={styles.tabCount}>{tab.count}</span>
+                  </button>
+                ))}
+              </div>
+
+              {friendshipsError && <div style={styles.errorBox}>{friendshipsError}</div>}
+
+              {isFriendshipsLoading ? (
+                <div style={styles.dashboardEmptyState}>
+                  <p style={styles.dashboardEmptyTitle}>Loading friendship dashboard...</p>
+                </div>
+              ) : activeItems.length === 0 ? (
+                <div style={styles.dashboardEmptyState}>
+                  <p style={styles.dashboardEmptyTitle}>
+                    {activeTab === "current" && "No current friends yet"}
+                    {activeTab === "incoming" && "No incoming requests"}
+                    {activeTab === "outgoing" && "No outgoing requests"}
+                  </p>
+                  <p style={styles.dashboardEmptyText}>
+                    {activeTab === "current" &&
+                      "Once you connect with people, their profiles and actions will show up here."}
+                    {activeTab === "incoming" &&
+                      "Incoming requests wait here until you accept them or decline them."}
+                    {activeTab === "outgoing" &&
+                      "Requests you send stay here until the other person accepts or you cancel them."}
+                  </p>
+                </div>
+              ) : (
+                <div style={styles.friendList}>
+                  {activeItems.map((friend) => (
+                    <div key={`${activeTab}-${friend.user_id}`} style={styles.friendCard}>
+                      <div style={styles.friendIdentity}>
+                        <div style={styles.avatarCircle}>
+                          {friend.username.slice(0, 1).toUpperCase()}
+                        </div>
+                        <div style={styles.friendMeta}>
+                          <strong style={styles.friendName}>{friend.username}</strong>
+                          <span style={styles.friendSubtext}>
+                            {friend.contact_info?.trim() || "No contact info added"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div style={styles.friendActions}>
+                        <Link
+                          to={`/userprofile/${friend.user_id}`}
+                          style={{ ...styles.smallGhostButton, ...styles.linkButton }}
+                        >
+                          View profile
+                        </Link>
+                        {activeTab === "incoming" ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleAcceptRequest(friend.user_id)}
+                              disabled={busyUserId === friend.user_id}
+                              style={styles.smallPrimaryButton}
+                            >
+                              {busyUserId === friend.user_id ? "Accepting..." : "Accept"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteFriendship(friend.user_id)}
+                              disabled={busyUserId === friend.user_id}
+                              style={styles.smallSecondaryButton}
+                            >
+                              Decline
+                            </button>
+                          </>
+                        ) : activeTab === "outgoing" ? (
                           <button
                             type="button"
                             onClick={() => handleDeleteFriendship(friend.user_id)}
                             disabled={busyUserId === friend.user_id}
                             style={styles.smallSecondaryButton}
                           >
-                            Decline
+                            {busyUserId === friend.user_id ? "Cancelling..." : "Cancel request"}
                           </button>
-                        </>
-                      ) : activeTab === "outgoing" ? (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteFriendship(friend.user_id)}
-                          disabled={busyUserId === friend.user_id}
-                          style={styles.smallSecondaryButton}
-                        >
-                          {busyUserId === friend.user_id ? "Cancelling..." : "Cancel request"}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteFriendship(friend.user_id)}
-                          disabled={busyUserId === friend.user_id}
-                          style={styles.smallSecondaryButton}
-                        >
-                          {busyUserId === friend.user_id ? "Removing..." : "Remove friend"}
-                        </button>
-                      )}
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteFriendship(friend.user_id)}
+                            disabled={busyUserId === friend.user_id}
+                            style={styles.smallSecondaryButton}
+                          >
+                            {busyUserId === friend.user_id ? "Removing..." : "Remove friend"}
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              )}
+            </article>
+          ) : (
+            <article style={{ ...styles.panel, ...styles.dashboardPanel }}>
+              <div style={styles.panelHeader}>
+                <h2 style={styles.panelTitle}>Connection overview</h2>
+                <span style={styles.panelAccent} />
               </div>
-            )}
-          </article>
+
+              <div style={styles.relationshipCard}>
+                <div style={styles.relationshipBadge}>{relationshipLabel}</div>
+                <p style={styles.relationshipText}>
+                  {profile.relationshipStatus === "none" &&
+                    "You are not connected yet. Send a request if you want to compare schedules or coordinate packs later."}
+                  {profile.relationshipStatus === "incoming_request" &&
+                    "This person already sent you a request. You can accept it from here or decline it if you are not ready to connect."}
+                  {profile.relationshipStatus === "outgoing_request" &&
+                    "You already sent a request. Leave it pending or cancel it if you changed your mind."}
+                  {profile.relationshipStatus === "friends" &&
+                    "You are already connected. Their contact info is visible and you can remove the friendship if needed."}
+                </p>
+                <div style={styles.relationshipActions}>
+                  <button
+                    type="button"
+                    onClick={handleProfileRelationshipAction}
+                    disabled={isRelationshipUpdating}
+                    style={styles.smallPrimaryButton}
+                  >
+                    {isRelationshipUpdating ? "Updating..." : relationshipActionLabel}
+                  </button>
+                  {profile.relationshipStatus === "incoming_request" && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteFriendship(profile.user_id)}
+                      disabled={isRelationshipUpdating}
+                      style={styles.smallSecondaryButton}
+                    >
+                      Decline request
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div style={styles.dashboardEmptyState}>
+                <p style={styles.dashboardEmptyTitle}>What you can see here</p>
+                <p style={styles.dashboardEmptyText}>
+                  Pack count and high-level profile info stay visible. Contact info is only shown
+                  once both users are connected as friends.
+                </p>
+              </div>
+            </article>
+          )}
         </section>
       </div>
     </div>
@@ -463,7 +706,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   heroText: {
     margin: 0,
-    maxWidth: "620px",
+    maxWidth: "640px",
     fontSize: "16px",
     lineHeight: 1.6,
     color: "#475569",
@@ -590,6 +833,7 @@ const styles: Record<string, React.CSSProperties> = {
     fontSize: "16px",
     color: "#0f172a",
     lineHeight: 1.5,
+    overflowWrap: "anywhere",
   },
   tabList: {
     display: "flex",
@@ -728,6 +972,50 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: 700,
     border: "1px solid #cbd5e1",
     cursor: "pointer",
+  },
+  smallGhostButton: {
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    minHeight: "40px",
+    padding: "0 14px",
+    borderRadius: "10px",
+    backgroundColor: "#eff6ff",
+    color: "#1d4ed8",
+    fontSize: "14px",
+    fontWeight: 700,
+    border: "1px solid #bfdbfe",
+  },
+  relationshipCard: {
+    padding: "20px",
+    borderRadius: "18px",
+    background: "linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%)",
+    border: "1px solid #dbeafe",
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
+  },
+  relationshipBadge: {
+    alignSelf: "flex-start",
+    padding: "8px 12px",
+    borderRadius: "999px",
+    backgroundColor: "#dbeafe",
+    color: "#1d4ed8",
+    fontSize: "13px",
+    fontWeight: 800,
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+  },
+  relationshipText: {
+    margin: 0,
+    fontSize: "15px",
+    lineHeight: 1.7,
+    color: "#334155",
+  },
+  relationshipActions: {
+    display: "flex",
+    gap: "10px",
+    flexWrap: "wrap",
   },
   loadingCard: {
     maxWidth: "440px",

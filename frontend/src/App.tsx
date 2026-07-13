@@ -47,6 +47,14 @@ export function App() {
             }
           />
           <Route
+            path="/userprofile/:userId"
+            element={
+              <ProtectedRoute>
+                <UserProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/"
             element={
               <PublicOnlyRoute>
