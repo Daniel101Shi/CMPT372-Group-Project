@@ -5,6 +5,7 @@ import session from "express-session";
 
 import authRoutes from "./routes/authRoutes.js";
 import friendshipRoutes from "./routes/friendshipRoutes.js";
+import packRoutes from "./routes/packRoutes.js"
 
 // getUserCourse
 import getUserCourseRoutes from "./routes/getUserCourseRoutes.js";
@@ -43,6 +44,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/api", authRoutes);
 app.use("/api", friendshipRoutes);
+app.use("/api", packRoutes);
 
 // getUserCourse
 app.use("/api", getUserCourseRoutes);

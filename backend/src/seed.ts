@@ -1,4 +1,4 @@
-import { pool } from "./db.js";
+import { pool } from "./db/db.js";
 
 // await pool.query(`INSERT INTO users (username, password_hash) VALUES ($1, $2)`, [
 //   "testuser",
