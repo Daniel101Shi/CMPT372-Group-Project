@@ -20,7 +20,7 @@ type AuthBody = {
 export async function register(req: Request , res: Response) {
     const {username, password, contactInfo} = req.body as AuthBody; //
     //validating the input :)
-    if (!username || username != "string" || username.trim().length === 0){
+    if (!username || typeof username !== "string" || username.trim().length === 0){
         return res.status(400).json( {error: "Username is needed"})}
     if (!password || typeof password !== "string" || password.length < 4) {
         return res.status(400).json({ error: "Password must be at least 4 characters long." });}
