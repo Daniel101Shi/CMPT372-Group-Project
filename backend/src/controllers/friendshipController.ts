@@ -27,6 +27,93 @@ function getFriendshipIds(req: Request, res: Response) {
   return { requesterId, recipientId };
 }
 
+function getSessionUserId(req: Request, res: Response) {
+  const userId = req.session.userId;
+
+  if (!userId) {
+    res.status(401).json({
+      error: "You must be logged in to access friendships.",
+    });
+    return null;
+  }
+
+  return userId;
+}
+
+export async function getFriendshipDashboard(req: Request, res: Response) {
+  const userId = getSessionUserId(req, res);
+
+  if (!userId) {
+    return;
+  }
+
+  try {
+    const [currentFriendsResult, incomingRequestsResult, outgoingRequestsResult] =
+      await Promise.all([
+        pool.query(
+          `
+            SELECT
+              u.user_id,
+              u.username,
+              u.contact_info,
+              u.created_at
+            FROM friendships f
+            JOIN users u
+              ON u.user_id = CASE
+                WHEN f.user_id_1 = $1 THEN f.user_id_2
+                ELSE f.user_id_1
+              END
+            WHERE (f.user_id_1 = $1 OR f.user_id_2 = $1)
+              AND f.pending = FALSE
+            ORDER BY u.username ASC
+          `,
+          [userId],
+        ),
+        pool.query(
+          `
+            SELECT
+              u.user_id,
+              u.username,
+              u.contact_info,
+              u.created_at
+            FROM friendships f
+            JOIN users u ON u.user_id = f.user_id_1
+            WHERE f.user_id_2 = $1
+              AND f.pending = TRUE
+            ORDER BY u.username ASC
+          `,
+          [userId],
+        ),
+        pool.query(
+          `
+            SELECT
+              u.user_id,
+              u.username,
+              u.contact_info,
+              u.created_at
+            FROM friendships f
+            JOIN users u ON u.user_id = f.user_id_2
+            WHERE f.user_id_1 = $1
+              AND f.pending = TRUE
+            ORDER BY u.username ASC
+          `,
+          [userId],
+        ),
+      ]);
+
+    return res.status(200).json({
+      currentFriends: currentFriendsResult.rows,
+      incomingPendingRequests: incomingRequestsResult.rows,
+      outgoingPendingRequests: outgoingRequestsResult.rows,
+    });
+  } catch (error) {
+    console.error("Failed to fetch friendship dashboard:", error);
+    return res.status(500).json({
+      error: "Internal server error.",
+    });
+  }
+}
+
 export async function sendFriendRequest(req: Request, res: Response) {
   const ids = getFriendshipIds(req, res);
 
