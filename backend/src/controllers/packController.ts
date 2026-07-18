@@ -2,6 +2,21 @@ import type { Request, Response } from "express";
 import { type PackID, type Pack, type PackMember} from "../types/Pack.js";
 import { packHelpers } from "../db/packHelpers.js"
 
+export const getPacks = async(req: Request, res: Response): Promise<Response>=>{
+    const owner_id = req.body.owner_id as number;
+    return packHelpers.getPacks(owner_id)
+            .then((packs : Pack[])=>{
+                console.log("Succesfully retrieved packs.");
+                return res.status(201).json({packs});
+                
+            }).catch((error : unknown)=>{
+                if(error instanceof Error)
+                    console.error(error.message);
+                else
+                    console.error("Unknown error");
+                return res.status(500).json({message: "Failed to retrieve packs."});
+            })
+}
 
 export const createPack = async(req: Request, res: Response): Promise<Response>=>{
         const new_pack = req.body.new_pack as Pack;

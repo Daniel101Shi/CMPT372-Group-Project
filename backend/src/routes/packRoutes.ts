@@ -1,11 +1,12 @@
 import { Router } from "express"
-import { createPack, deletePack, addPackMember, deletePackMember} from "../controllers/packController.js";
+import { getPacks, createPack, deletePack, addPackMember, deletePackMember} from "../controllers/packController.js";
 
 const router = Router();
 
+router.get("/packs/get-packs", getPacks);
 router.post("/packs/create-pack", createPack);
-router.post("/packs/delete-pack", deletePack);
-router.post("/packs/add-member", addPackMember);
-router.post("/packs/delete-member", deletePackMember);
+router.delete("/packs/delete-pack", deletePack);
+router.patch("/packs/add-member", addPackMember);
+router.patch("/packs/delete-member", deletePackMember);
 
 export default router;
