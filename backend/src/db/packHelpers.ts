@@ -1,6 +1,7 @@
 import { pool } from "../db/db.js"
 import { type QueryResult, type PoolClient} from "pg";
 import { type PackID, type Pack, type PackMember } from "../types/Pack.js";
+import { addPackMember } from "../controllers/packController.js";
 
 const addFriendsToPack = async(client : PoolClient, pack_id: number, friends: number[])=>{
 
@@ -49,8 +50,67 @@ const packHelpers = {
         } finally {
             client.release();
         }
-    }
+    },
 
+    deletePack: async(pack_id : PackID) : Promise<void> =>{
+        const packDeletionQuery = `DELETE FROM packs WHERE pack_id = $1;`;
+        const client = (await pool.connect()) as PoolClient;
+        try{
+            await client.query("BEGIN");
+            await client.query(packDeletionQuery, [pack_id]);
+            await client.query("COMMIT");
+        }catch(error){
+            await client.query("ROLLBACK");
+            throw error;
+        } finally{
+            client.release();
+        }
+    },
+
+    addPackMember: async(user_id: number, pack_id: PackID) : Promise<PackMember>=>{
+        const addPackMemberQuery = 
+        `
+        INSERT INTO pack_members (user_id, pack_id)
+        VALUES ($1, $2)
+        RETURNING
+        pack_id,
+        user_id;
+        `;
+        const client = (await pool.connect()) as PoolClient;
+        try{
+            await client.query("BEGIN");
+            const result = (await client.query(
+                addPackMemberQuery, [user_id, pack_id]
+            )) as QueryResult;
+            await client.query("COMMIT");
+            return (result.rows[0]) as PackMember;
+            
+        }catch(error){
+            await client.query("ROLLBACK");
+            throw error;
+        } finally{
+            client.release();
+        }
+    },
+
+    deletePackMember: async(user_id: number, pack_id: PackID) : Promise<void>=>{
+        const deletePackMemberQuery = 
+        `
+        DELETE FROM pack_members 
+        WHERE user_id = $1 AND pack_id = $2;
+        `;
+        const client = (await pool.connect()) as PoolClient;
+        try{
+            await client.query("BEGIN");
+            await client.query(deletePackMemberQuery, [user_id, pack_id]);
+            await client.query("COMMIT");
+        }catch(error){
+            await client.query("ROLLBACK");
+            throw error;
+        } finally{
+            client.release();
+        }
+    }
 };
 
 export { packHelpers };
