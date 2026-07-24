@@ -1,6 +1,6 @@
 import { pool } from "../db/db.js"
 import { type QueryResult, type PoolClient} from "pg";
-import { type PackID, type Pack, type PackMember } from "../types/Pack.js";
+import { type PackID, type Pack, type PackMember, type Friend} from "../types/Pack.js";
 import { addPackMember } from "../controllers/packController.js";
 
 const addFriendsToPack = async(client : PoolClient, pack_id: number, friends: number[])=>{
@@ -42,14 +42,13 @@ const packHelpers = {
 
     },
 
-    createPack: async(pack : Pack, friends: number[]) : Promise<PackID> =>{
+    createPack: async(pack : Pack, friends: number[]) : Promise<Pack> =>{
         
         const packCreationQuery = 
         `
         INSERT INTO packs (owner_id, group_name, semester, year)
         VALUES ($1, $2, $3, $4)
-        RETURNING
-        pack_id
+        RETURNING *;
         `;
         const client = (await pool.connect()) as PoolClient;
         try{
@@ -61,13 +60,13 @@ const packHelpers = {
                 pack.year
             ])) as QueryResult;
 
-            const pack_id : number = result.rows[0].pack_id;
+            const new_pack : Pack = result.rows[0];
 
-            await addFriendsToPack(client, pack_id, friends);
+            await addFriendsToPack(client, new_pack.pack_id, friends);
 
             await client.query("COMMIT");
 
-            return pack_id;
+            return new_pack;
 
         }catch(error){
             await client.query("ROLLBACK");

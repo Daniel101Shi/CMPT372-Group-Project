@@ -5,7 +5,6 @@ import { RegisterPage } from "./components/auth/RegisterPage";
 import { ScheduleBuilderComponent } from "./components/schedule-builder/ScheduleBuilderComponent";
 import { UserProfilePage } from "./components/profile/UserProfilePage";
 import { PackPage } from "./components/packs/PackPage";
-import { mockPacks } from "./mockData/mockPacks";
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -32,6 +31,14 @@ export function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+        <Route
+            path="/pack"
+            element={
+              <ProtectedRoute>
+                <PackPage/>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/schedulebuilder"
             element={
@@ -77,14 +84,6 @@ export function App() {
             element={
               <PublicOnlyRoute>
                 <RegisterPage />
-              </PublicOnlyRoute>
-            }
-          />
-           <Route
-            path="/pack"
-            element={
-              <PublicOnlyRoute>
-                <PackPage packs = {mockPacks}/>
               </PublicOnlyRoute>
             }
           />

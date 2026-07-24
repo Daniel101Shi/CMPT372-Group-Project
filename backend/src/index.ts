@@ -11,6 +11,7 @@ import userRoutes from "./routes/userRoutes.js";
 // getUserCourse
 import getUserCourseRoutes from "./routes/getUserCourseRoutes.js";
 
+import { testConnection, shutdown } from "./db/testDB.js";
 
 dotenv.config();
 
@@ -52,6 +53,22 @@ app.use("/api", userRoutes);
 app.use("/api", getUserCourseRoutes);
 
 
-app.listen(port, "0.0.0.0", () => {
-  console.log(`Backend listening on port ${port}`);
-});
+
+
+
+async function startServer(){
+  try{
+    await testConnection();
+    console.log("Connected to PostgreSQL")
+    app.listen(port, "0.0.0.0", () => {
+      console.log(`Backend listening on port ${port}`);
+    });
+  }catch(error){
+    console.error("Failed to connect to PostgreSQL:", error);
+    process.exit(1);
+  }
+}
+
+startServer();
+process.on("SIGINT", () => shutdown("SIGINT"));
+process.on("SIGTERM", () => shutdown("SIGTERM"));

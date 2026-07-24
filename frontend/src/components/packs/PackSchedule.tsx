@@ -57,9 +57,9 @@ export function PackSchedule({}){
     }
     const renderPackMembers = ()=>{
         return(
-            mockPackMembers.map((member)=>{
+            mockPackMembers.map((member, index)=>{
                 return(
-                    <div>{member.username}</div>
+                    <div key={index}>{member.username}</div>
                 )
             })  
         )

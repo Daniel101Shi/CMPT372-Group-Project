@@ -1,21 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Dropdown, Form } from "react-bootstrap";
-import { mockPackMembers } from '../../mockData/mockPacks';
-import { type PackMember } from '../../types/Pack';
-function SearchBar() {
-    const [search, setSearch] = useState("");
-    const [selected, setSelected] = useState<PackMember>(
-        {
-            user_id: -1,
-            username: ""
-        }
-    );
-    const [showDropdown, setShowDropdown] = useState(false);
+import { type Friend} from '../../types/Pack';
 
-    const filteredPackMembers = mockPackMembers.filter((member)=>{
+type SearchBarProps = {
+    search: string,
+    setSelected: React.Dispatch<React.SetStateAction<Friend>>,
+    setSearch: React.Dispatch<React.SetStateAction<string>>,
+    setShowDropdown: React.Dispatch<React.SetStateAction<boolean>>,
+    searchDropdown: Friend[],
+    showDropdown: boolean,
+    selected: Friend
+};
+function SearchBar({search, selected, setSelected, setSearch, setShowDropdown, showDropdown, searchDropdown} : SearchBarProps) {
+    const filteredFriends = searchDropdown.filter((member)=>{
         return member.username.toLowerCase().includes(search.toLowerCase());
     })
-    const selectPackMember = (member: PackMember) => {
+    const selectFriend = (member: Friend) => {
         setSelected(member);
         setSearch(member.username);
         setShowDropdown(false);
@@ -43,12 +43,12 @@ function SearchBar() {
     </Dropdown.Toggle>
 
     <Dropdown.Menu className="w-100">
-        {filteredPackMembers.length > 0 ? (
-          filteredPackMembers.map((member) => (
+        {filteredFriends.length > 0 ? (
+          filteredFriends.map((member) => (
             <Dropdown.Item
               key={member.user_id}
               active={member.username === selected.username}
-              onClick={() => selectPackMember(member)}
+              onClick={() => selectFriend(member)}
             >
               {member.username} #{member.user_id}
             </Dropdown.Item>

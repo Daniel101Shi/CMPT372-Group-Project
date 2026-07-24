@@ -20,7 +20,7 @@ export function SemestersContextProvider({ children }: { children: React.ReactNo
 
     async function fetch_sems(year: string): Promise<string[]> {
         if (year.length == 0) {return []}
-        let endpoint = `http://www.sfu.ca/bin/wcm/course-outlines?${year}`
+        let endpoint = `https://www.sfu.ca/bin/wcm/course-outlines?${year}`
         const res = await fetch(endpoint, {
             method: "GET",
         });
@@ -56,7 +56,6 @@ export function SemestersContextProvider({ children }: { children: React.ReactNo
         }
         intitialise();
     }, [year_interface.selected]) // sems will update whenever selected year changes
-
     return (
         <SemestersContext.Provider value={{data: semesters, isloading: loading, selected, selected_setter}}>
             {children}

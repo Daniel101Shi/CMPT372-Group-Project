@@ -28,8 +28,35 @@
 }
 .friend-adder > *{
     flex: 0 0 40%;
-
 }
+
+.chosen-friends{
+    display: flex;
+    flex-wrap: wrap;
+    background-color: green;
+    border-radius: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+
+.chosen-friends div{
+    flex: 0 0 15%;
+    margin: 5px;
+    display: flex;
+    border-radius: 5px;
+    justify-content: center;
+    align-items: center;
+    background-color: darkgreen;
+    padding: 10px;
+    color: white;
+}
+.chosen-friends h3{
+    color: white;
+    flex: 0 0 100%;
+    padding: 5px;
+}
+
 .search-dropdown-toggle::after {
     display: none;
 }
@@ -56,6 +83,7 @@
     flex: 0 0 40%;
     gap: 30px;
     margin: 10px;
+    align-self: flex-start;
 }
 
 
@@ -65,6 +93,7 @@
     margin: 0 auto;
     margin-top: 10px;
 }
+
 
 
 .PackSchedule{
@@ -143,6 +172,8 @@
     justify-content: center;
     
 }
+
+
 
 
   /* Desktop styles */

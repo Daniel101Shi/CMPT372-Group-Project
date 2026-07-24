@@ -1,9 +1,9 @@
 import type { Request, Response } from "express";
-import { type PackID, type Pack, type PackMember} from "../types/Pack.js";
+import { type PackID, type Pack, type PackMember, type Friend} from "../types/Pack.js";
 import { packHelpers } from "../db/packHelpers.js"
 
 export const getPacks = async(req: Request, res: Response): Promise<Response>=>{
-    const owner_id = req.body.owner_id as number;
+    const owner_id = Number(req.params.owner_id);
     return packHelpers.getPacks(owner_id)
             .then((packs : Pack[])=>{
                 console.log("Succesfully retrieved packs.");
@@ -33,9 +33,9 @@ export const createPack = async(req: Request, res: Response): Promise<Response>=
         }
 
         return packHelpers.createPack(new_pack, friends)
-            .then((pack_id: PackID)=>{
+            .then((pack: Pack)=>{
                 console.log("Succesfully created pack.");
-                return res.status(201).json({pack_id});
+                return res.status(201).json({pack});
                 
             }).catch((error : unknown)=>{
                 if(error instanceof Error)
