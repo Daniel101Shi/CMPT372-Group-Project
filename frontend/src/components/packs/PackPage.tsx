@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {type Pack, type PackMember, type Friend} from "../../types/Pack";
+import { type UserInfo } from "../../types/User";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container"
@@ -18,17 +19,28 @@ import "./packs.css"
 type PackPageProps = {
     packs: Pack[];
 };
+
+
 const defaultPack : Pack = {
     pack_id: -1,
     owner_id: -1, 
     group_name: "",
     semester: "string",
     year: 0
+};
+
+interface CompletePack{
+    pack: Pack,
+    members: UserInfo[]
+};
+
+const defaultCPack : CompletePack = {
+    pack: defaultPack,
+    members: []
 }
 
 export function PackPage(){
-    const sem_data = useSemestersContext();
-    const year_data = useYearsContext();
+
     const [semester, setSemester] = useState<string>("None");
 
     const [year, setYear] = useState<number>(0);
@@ -38,25 +50,15 @@ export function PackPage(){
     const [createPack, setCreatePack] = useState<Boolean>(false);
 
     //matters if createPack is false
-    const [chosenPack, setChosenPack] = useState<Pack>(defaultPack);
+    const [chosenPack, setChosenPack] = useState<CompletePack>(defaultCPack);
+
 
     const { user, loading} = useAuth();
 
     useEffect(()=>{
         fetchPacks();
     },[])
-    // useEffect(() => {
-    //     if(!sem_data.isloading && sem_data.data.length > 0){
-    //         console.log("setting semester to:", sem_data.data[0]);
-    //         setSemester(sem_data.data[0]);
-    //     }
-    // }, [sem_data.isloading, sem_data.data]);
-
-    // useEffect(() => {
-    //     if(!year_data.isloading && year_data.data.length > 0){
-    //         setYear(Number(year_data.data[0]));
-    //     }
-    // }, [year_data.isloading, year_data.data]);
+    
 
     useEffect(() => {
         console.log("semester changed:", semester);
@@ -104,6 +106,7 @@ export function PackPage(){
             
             const created_pack = data.pack as Pack;
             setPacks([...packs, created_pack]);
+            setCreatePack(false);
 
 
         }catch(error){
@@ -115,6 +118,34 @@ export function PackPage(){
         }
     }
 
+    const fetchPackData = async(pack : Pack)=>{
+        try{
+            const owner_id = user.user_id;
+            const pack_id = pack.pack_id;
+            const response = await fetch(`http://localhost:3001/api/packs/get-pack-data/${owner_id}/${pack_id}`, {
+                method: "GET"
+            });
+
+            const data = await response.json();
+
+            if(!response.ok){
+                throw new Error(data.message);
+            }
+            const members : UserInfo[] = data.pack_data; 
+            const newCPack = {
+                pack: pack,
+                members: members
+            };
+            setChosenPack(newCPack);
+            console.log(newCPack);
+        }catch(error){
+            if(error instanceof Error){
+                console.error(error.message);
+            } else{
+                console.error("Unknown error occured");
+            }
+        }
+    }
     
     const fetchPacks = async()=>{
         try{
@@ -147,24 +178,58 @@ export function PackPage(){
         }
         
     }
+    
 
     const renderPacks = ()=>{
         return(
             <div className = "PacksContainer">
-                {packs?.map((pack : Pack, index)=>
-                    <Card key={index} className = "PackCard" style={{ width: '18rem' }}>
-                        <Card.Body>
-                            <Card.Title>{pack.group_name}</Card.Title>
-                            <Card.Text>
-                                {pack.semester} {pack.year}
-                            </Card.Text>
-                            <Button variant="primary">Pack Schedule</Button>
-                        </Card.Body>
-                </Card>
-                )}
+                {packs?.map((pack : Pack, index)=>{
+                    const isSelected = chosenPack?.pack?.pack_id === pack.pack_id;
+                    return(
+                        <Card key={index} className = "PackCard" style={{ width: '18rem' }}>
+                            <Card.Body>
+                                <Card.Title>{pack.group_name}</Card.Title>
+                                <Card.Text>
+                                    {pack.semester} {pack.year}
+                                </Card.Text>
+                                
+                                <Button style={{
+                                   boxShadow: isSelected ? "none" : "0 4px 0 #4a2600",                               
+                                   transform: isSelected ? "translateY(4px)" : "translateY(0)",                             
+                                   transition: "transform 0.05s, box-shadow 0.05s",
+                                }} onClick={()=>{fetchPackData(pack)}} variant="primary">Pack Schedule</Button>
+                            </Card.Body>
+                    </Card>
+                )})}
             </div>
         )
     }
+
+
+    // function mergeSchedules(original: Cell[][], new_sched: Schedule){
+    //     original.forEach((row, row_index) =>{
+    //         row.forEach((col, col_index) =>{
+    //             const cell : Cell = original[row_index][col_index];
+    //             const sched_cell = new_sched.grid[row_index][col_index] as 0 | 1 | 2;
+    //             if(sched_cell == 1)
+    //                 cell.users.push(new_sched.user_id);
+    //         })
+    //     })
+    // }
+
+    // const createAggregateSchedule = () : void => {
+    //     const schedules : Schedule[] = members.map((member)=>{
+    //         return(scheduleStringToGrid(member.user_id, member.campus_schedule))
+    //     })
+    //     const original : Cell[][] = getDefaultGrid();
+
+    //     members.forEach((member)=>{
+    //         const current_schedule : Schedule = scheduleStringToGrid(member.user_id, member.campus_schedule);
+    //         mergeSchedules(original, current_schedule);
+    //     });
+
+    //     setSchedule(original);
+    // }
 
     return(
         <YearsContextProvider>
@@ -176,7 +241,7 @@ export function PackPage(){
                                     {createPack || packs.length == 0 ? <CreatePack semester={semester} year={year} setSemester={setSemester} setYear={setYear} createNewPack={createNewPack}/> : renderPacks()}
                                     {packs.length == 0 ? <div/> : <Button onClick={()=>setCreatePack(!createPack)} className="toggle-create-view-packs align-self-center" size="sm">{createPack ? "View packs" : "Create Pack"}</Button>}
                             </Col>
-                            <Col xs={12} md={12} lg={8} xl={6}><PackSchedule/></Col>
+                            <Col xs={12} md={12} lg={8} xl={6}><PackSchedule pack={chosenPack.pack} members={chosenPack.members}/></Col>
                         </Row>
                     </Container>
                 </div>

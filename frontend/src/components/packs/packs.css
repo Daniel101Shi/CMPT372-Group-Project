@@ -136,16 +136,17 @@
 .heatmap-cell{
     border: 1px solid var(--bs-border-color, #dee2e6);
     border-radius: 5px;
+    max-height: 32px;
 }
 
-.heatmap-cell.available{
+/* .heatmap-cell.available{
     background-color: green;
     max-height: 32px;
-}
-.heatmap-cell.unavailable{
+} */
+/* .heatmap-cell.unavailable{
     background-color: red;
     max-height: 32px;
-}
+} */
 .heatmap-cell.blank{
     background-color: grey;
     max-height: 32px;

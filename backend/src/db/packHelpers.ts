@@ -1,6 +1,7 @@
 import { pool } from "../db/db.js"
 import { type QueryResult, type PoolClient} from "pg";
 import { type PackID, type Pack, type PackMember, type Friend} from "../types/Pack.js";
+import { type UserInfo } from "../types/User.js";
 import { addPackMember } from "../controllers/packController.js";
 
 const addFriendsToPack = async(client : PoolClient, pack_id: number, friends: number[])=>{
@@ -134,7 +135,52 @@ const packHelpers = {
         } finally{
             client.release();
         }
+    },
+
+    getPackMembersUserInfo:  async(pack_id: PackID) : Promise<UserInfo[]>=>{
+        const getQuery = 
+        `
+        SELECT pack_members.user_id, users.username, users.contact_info, users.campus_schedule, users.created_at 
+        FROM pack_members 
+        INNER JOIN users 
+            ON users.user_id = pack_members.user_id
+        WHERE pack_id = $1;
+        `;
+        const client = (await pool.connect()) as PoolClient;
+        try{
+            await client.query("BEGIN");
+            const result = await client.query(getQuery, [pack_id]) as QueryResult;
+            await client.query("COMMIT");
+            return (result.rows) as UserInfo[];
+        }catch(error){
+            await client.query("ROLLBACK");
+            throw error;
+        } finally{
+            client.release();
+        }
+    },
+
+    getPackOwnersInfo:  async(owner_id: number) : Promise<UserInfo>=>{
+        const getQuery = 
+        `
+        SELECT user_id, username, contact_info, campus_schedule, created_at 
+        FROM users
+        WHERE user_id = $1;
+        `;
+        const client = (await pool.connect()) as PoolClient;
+        try{
+            await client.query("BEGIN");
+            const result = await client.query(getQuery, [owner_id]) as QueryResult;
+            await client.query("COMMIT");
+            return (result.rows[0]) as UserInfo;
+        }catch(error){
+            await client.query("ROLLBACK");
+            throw error;
+        } finally{
+            client.release();
+        }
     }
+    
 };
 
 export { packHelpers };
