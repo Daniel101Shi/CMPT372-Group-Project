@@ -92,36 +92,36 @@ export const deletePack = async(req: Request, res: Response): Promise<Response>=
             
 }
 
-export const addPackMember = async(req: Request, res: Response): Promise<Response>=>{
-    const user_id = req.body.user_id as number;
-    const pack_id = req.body.user_id as PackID;
-    return packHelpers.addPackMember(user_id, pack_id)
-        .then((newPackMember : PackMember)=>{
-            console.log("Succesfully added pack member.");
-            return res.status(201).json({newPackMember});
+
+
+export const getPackMembers = async(req: Request, res: Response): Promise<Response>=>{
+    const pack_id : PackID = Number(req.params.pack_id);
+    return packHelpers.getPackMembers(pack_id)
+        .then((members : PackMember[])=>{
+            console.log("Succesfully retrieved pack members.");
+            return res.status(201).json({members});
 
         }).catch((error: unknown)=>{
             if(error instanceof Error)
                 console.error(error.message);
             else
                 console.error("Unknown error");
-            return res.status(500).json({ message: "Failed to add pack member"})
+            return res.status(500).json({ message: "Failed to retrieve pack members"})
         })
 }
 
-export const deletePackMember = async(req: Request, res: Response): Promise<Response>=>{
-    const user_id = req.body.user_id as number;
-    const pack_id = req.body.user_id as PackID;
-    return packHelpers.deletePackMember(user_id, pack_id)
-        .then(()=>{
-            console.log("Succesfully deleted pack member.");
-            return res.status(201).json({message: "Succesfully deleted pack member."});
+export const editPack = async(req: Request, res: Response): Promise<Response>=>{
+    const edited_pack = req.body.edited_pack as Pack; 
+    return packHelpers.editPack(edited_pack)
+        .then((updated_pack : Pack)=>{
+            console.log("Succesfully edited pack.");
+            return res.status(201).json({updated_pack});
 
         }).catch((error: unknown)=>{
             if(error instanceof Error)
                 console.error(error.message);
             else
                 console.error("Unknown error");
-            return res.status(500).json({ message: "Failed to delete pack member"})
+            return res.status(500).json({ message: "Failed to edit pack"})
         })
 }

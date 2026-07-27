@@ -286,7 +286,3 @@ function slotToTime(slot: number): string {
         .toString()
         .padStart(2, "0")}`;
 }
-
-
-
-printCampusScheduleGrid(getRandomCampusSchedule());

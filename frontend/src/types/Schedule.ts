@@ -1,11 +1,12 @@
+import { type User } from "./Pack";
 export type Cell = {
-   users: number[]
+   users: User[]
 };
 
 export type ScheduleCell = Cell | 0 | 1 | 2;
 
 export interface Schedule{
-    user_id: number;
+    user: User;
     grid: ScheduleCell[][];
 };
 

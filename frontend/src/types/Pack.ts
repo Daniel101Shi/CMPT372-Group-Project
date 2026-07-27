@@ -15,8 +15,7 @@ export interface PackMember{
     user_id: number
 };
 
-export interface NamedPackMember{
-    pack_id: number,
+export interface User{
     user_id: number,
     username: string,
 };

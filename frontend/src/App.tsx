@@ -5,6 +5,7 @@ import { RegisterPage } from "./components/auth/RegisterPage";
 import { ScheduleBuilderComponent } from "./components/schedule-builder/ScheduleBuilderComponent";
 import { UserProfilePage } from "./components/profile/UserProfilePage";
 import { PackPage } from "./components/packs/PackPage";
+import { Toaster } from "sonner";
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -28,6 +29,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export function App() {
   return (
+    <>
+    <Toaster richColors position="top-center" />
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -90,5 +93,6 @@ export function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </>
   );
 }
