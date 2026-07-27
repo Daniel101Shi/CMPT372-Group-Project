@@ -128,7 +128,7 @@ export function CreatePack({createNewPack, semester, year, setSemester, setYear}
         }
     }
 
-
+    //AI assistance was used below to help with bootstrap styling
     return (
         <Container
           fluid
