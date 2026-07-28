@@ -10,7 +10,7 @@ import { packValidation } from "./validation/packs.js";
 
 export const getPackData = async(req: Request, res: Response): Promise<Response>=>{
     try{
-        const owner_id : number = Number(req.params.owner_id);
+        const owner_id : number = Number(req.session.userId);
         const pack_id : number = Number(req.params.pack_id);
 
         if(!packValidation.isValidUserId(owner_id)){
@@ -52,7 +52,7 @@ export const getPackData = async(req: Request, res: Response): Promise<Response>
 }
 
 export const getPacks = async(req: Request, res: Response): Promise<Response>=>{
-    const owner_id = Number(req.params.owner_id);
+    const owner_id : number = Number(req.session.userId);
     if(!packValidation.isValidUserId(owner_id)){
         return packsErrors.invalidOwnerIdResponse(res) as Response;
     }
@@ -151,8 +151,7 @@ export const getPackMembers = async(req: Request, res: Response): Promise<Respon
 export const editPack = async(req: Request, res: Response): Promise<Response>=>{
     const edited_pack = req.body.edited_pack as Pack; 
     const pack_id = edited_pack.pack_id as PackID;
-    const owner_id = edited_pack.owner_id as number;
-
+    const owner_id : number = Number(req.session.userId);
     if(!packValidation.isValidUserId(owner_id)){
         return packsErrors.invalidOwnerIdResponse(res) as Response;
     }

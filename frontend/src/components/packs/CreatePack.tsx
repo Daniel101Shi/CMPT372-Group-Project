@@ -26,6 +26,7 @@ type CreatePackProps = {
     createNewPack: (group_name: string, members: Friend[]) => Promise<void>;
 };
 
+const apiUrl = import.meta.env.VITE_API_URL;
 
 
 export function CreatePack({createNewPack, semester, year, setSemester, setYear} : CreatePackProps){
@@ -49,9 +50,9 @@ export function CreatePack({createNewPack, semester, year, setSemester, setYear}
 
     const fetchFriendships = async () => {
         try{
-            const response = await fetch(`http://localhost:3001/api/friendships`, {
+            const response = await fetch(`${apiUrl}/api/friendships`, {
             method: "GET",
-            credentials: "include",
+            credentials: "include"
             });
         
             const data = await response.json();

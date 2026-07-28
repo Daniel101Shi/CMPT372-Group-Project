@@ -30,6 +30,8 @@ const defaultCPack: CompletePack = {
     members: []
 }
 
+const apiUrl = import.meta.env.VITE_API_URL;
+
 export function PackPage() {
     const [chosenEditPack, setChosenEditPack] = useState<Pack>(defaultPack);
 
@@ -52,10 +54,6 @@ export function PackPage() {
     useEffect(() => {
         fetchPacks();
     }, [])
-
- 
-
-
 
 
     const clearChosenPack = ()=>{
@@ -84,10 +82,11 @@ export function PackPage() {
                 year: year
             };
 
-            const response: Response = await fetch(`http://localhost:3001/api/packs/create-pack`, {
+            const response: Response = await fetch(`${apiUrl}/api/packs/create-pack`, {
                 method: "POST",
+                credentials: "include",
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ new_pack, friends })
             });
@@ -128,8 +127,9 @@ export function PackPage() {
             if (pack_id == chosenPack.pack.pack_id) {
                 return;
             }
-            const response = await fetch(`http://localhost:3001/api/packs/get-pack-data/${owner_id}/${pack_id}`, {
-                method: "GET"
+            const response = await fetch(`${apiUrl}/api/packs/get-pack-data/${owner_id}/${pack_id}`, {
+                method: "GET",
+                credentials: "include"
             });
 
             const data = await response.json();
@@ -160,8 +160,9 @@ export function PackPage() {
                 return;
 
             const owner_id = user.user_id;
-            const response: Response = await fetch(`http://localhost:3001/api/packs/get-packs/${owner_id}`, {
-                method: "GET"
+            const response: Response = await fetch(`${apiUrl}/api/packs/get-packs/${owner_id}`, {
+                method: "GET",
+                credentials: "include"
             });
             if (!response.ok) {
                 const data = await response.json();
@@ -190,10 +191,11 @@ export function PackPage() {
             setChosenPack(defaultCPack);
             setChosenEditPack(defaultPack);
             setEditPack(false);
-            const response: Response = await fetch(`http://localhost:3001/api/packs/delete-pack`, {
+            const response: Response = await fetch(`${apiUrl}/api/packs/delete-pack`, {
                 method: "DELETE",
+                credentials: "include",
                 headers: {
-                    "Content-Type": "application/json",
+                    "Content-Type": "application/json"
                 },
                 body: JSON.stringify({ pack_id })
             });
@@ -215,11 +217,12 @@ export function PackPage() {
         try{
             setEditPack(false);
             setChosenEditPack(defaultPack);
-            const response: Response = await fetch(`http://localhost:3001/api/packs/edit-pack`, {
+            const response: Response = await fetch(`${apiUrl}/api/packs/edit-pack`, {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
                 },
+                credentials: "include",
                 body: JSON.stringify({ edited_pack: pack })
             });
             const data = await response.json();
