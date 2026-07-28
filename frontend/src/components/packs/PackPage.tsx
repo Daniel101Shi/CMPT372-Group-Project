@@ -90,13 +90,12 @@ export function PackPage() {
                 },
                 body: JSON.stringify({ new_pack, friends })
             });
+            const data = await response.json();
 
             if (!response.ok) {
-                const data = await response.json();
-                throw new Error(`${data.message}`);
+                throw new Error(data.error.message || "Failed to create new pack.");
             }
 
-            const data = await response.json();
             if (typeof data.pack !== "object" || data.pack === null) {
                 throw new Error("Invalid: pack should be a non-null object");
             }
@@ -135,8 +134,9 @@ export function PackPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.message);
+                throw new Error(data.error.message || "Failed to fetch pack data.");
             }
+            
             const members: UserInfo[] = data.pack_data;
             const newCPack = {
                 pack: pack,
@@ -164,12 +164,12 @@ export function PackPage() {
                 method: "GET",
                 credentials: "include"
             });
+            const data = await response.json();
             if (!response.ok) {
-                const data = await response.json();
-                throw new Error(`${data.message}`)
+                throw new Error(data.error.message || "Failed to fetch packs.");
             }
 
-            const data = await response.json();
+
             if (!Array.isArray(data.packs))
                 throw new Error("Invalid response: packs isn't an array");
 
@@ -200,8 +200,8 @@ export function PackPage() {
                 body: JSON.stringify({ pack_id })
             });
             const data = await response.json();
-            if(!response.ok){
-                throw new Error(`${data.message}`)
+            if (!response.ok) {
+                throw new Error(data.error.message || "Failed to delete pack.");
             }
             setPacks(packs.filter((pack)=> pack.pack_id != pack_id));
         }catch(error){
@@ -226,16 +226,15 @@ export function PackPage() {
                 body: JSON.stringify({ edited_pack: pack })
             });
             const data = await response.json();
-            if(!response.ok){
-                throw new Error(`${data.message}`)
+            if (!response.ok) {
+                throw new Error(data.error.message || "Failed to edit pack.");
             }
             const updated_pack = data.updated_pack as Pack;
             setPacks((currentPacks)=>
                 currentPacks.map((pack)=>
                 pack.pack_id === updated_pack.pack_id
                 ? updated_pack : pack
-            )
-            );
+            ));
         }catch(error){
             if (error instanceof Error) {
                 console.error(error.message);

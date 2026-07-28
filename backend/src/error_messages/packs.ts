@@ -88,7 +88,7 @@ const packsErrors = {
     failedEditPackResponse: (res: Response) : Response => {
         return res.status(500).json({
             error:{
-                code: "FAILED_PACK_EDIT",
+                code: "PACK_EDI_EDIT",
                 message: "Failed to edit pack."
             }
         });
