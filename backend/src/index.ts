@@ -10,6 +10,7 @@ import userRoutes from "./routes/userRoutes.js";
 
 // getUserCourse
 import getUserCourseRoutes from "./routes/getUserCourseRoutes.js";
+import getFriendCourseRoutes from "./routes/getFriendCourseRoutes.js";
 
 
 dotenv.config();
@@ -50,6 +51,7 @@ app.use("/api", userRoutes);
 
 // getUserCourse
 app.use("/api", getUserCourseRoutes);
+app.use("/api", getFriendCourseRoutes);
 
 
 app.listen(port, "0.0.0.0", () => {
