@@ -16,6 +16,20 @@ function get_time_string_from_i(i: number) {
   )
 }
 
+async function handle_post({year, semester, courses, availability}: {year: string, semester: string, courses: {department: string, c_number: string, section: string}[], availability: string}) {
+  const origin = new URL(window.location.href).origin
+  const res = await fetch(`${origin}/api/schedule/${year}/${semester}`, {
+    method: "POST",
+    credentials: "include",
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(
+      {
+        courses: courses,
+        availability: availability
+      }
+    )})
+}
+
 export function ScheduleBuilder() {
   let [search, search_setter] = useState("");
   let selected_interface = useSelectedContext();
@@ -32,14 +46,32 @@ export function ScheduleBuilder() {
         // send a post message with some json object
         // save this courseload into db
         x.preventDefault();
-        console.log('schedule with:',
-          'free_time: ', free_time.join(''),
-          'courses: ', selected_interface.selected.map(
-            (x) => (String(year_interface.selected.year) + ' ' + String(semesters_interface.selected.semester) + ' ' + String(x.department) + ' ' + String(x.c_number) + ' ')
-          ).join(''),
-          'offerings: ', selected_interface.selected_offerings
+        handle_post({year: year_interface.selected.year, semester: semesters_interface.selected.semester, availability: free_time.join(''), courses:
+          selected_interface.selected_offerings.flatMap((x, index) => 
+            (x.lec != null ? [{
+              department: selected_interface.selected[index].department,
+              c_number: selected_interface.selected[index].c_number,
+              section: x.lec
+            }] : []).concat(
+            x.tut != null ? [{
+              department: selected_interface.selected[index].department,
+              c_number: selected_interface.selected[index].c_number,
+              section: x.tut
+            }] : []).concat(
+            x.lab != null ? [{
+              department: selected_interface.selected[index].department,
+              c_number: selected_interface.selected[index].c_number,
+              section: x.lab
+            }] : []).concat(
+              x.sem != null ? [{
+              department: selected_interface.selected[index].department,
+              c_number: selected_interface.selected[index].c_number,
+              section: x.sem
+            }] : [])
+          )
+        }
         )
-      }}>
+        }}>
         <Container>
           <Row>
             <h1>schedule creation</h1>
@@ -70,10 +102,11 @@ export function ScheduleBuilder() {
           </Row>
           <hr />
           <Row>
-            <h3>
-              current saved schedule:
-            </h3>
             <Col>
+              <h3>current saved schedule:</h3>
+              todo, just displays the current saved for semester
+              so the button feels responsive
+              and just cause its reasonable to display on this page
               {/* 
               something like this if i display the current schedule
               {current_courses.length == 0 ? <Table><thead><tr><th>none</th></tr></thead></Table> :
@@ -94,7 +127,7 @@ export function ScheduleBuilder() {
               } */}
             </Col>
             <Col>
-              <Button className='form-control' variant='success' type='submit'>overwrite with selected</Button>
+              <Button className='form-control' variant='success' type='submit' disabled={selected_interface.loading}>overwrite with selected</Button>
             </Col>
           </Row>
           <hr />
