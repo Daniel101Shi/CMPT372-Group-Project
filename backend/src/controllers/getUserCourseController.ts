@@ -2,20 +2,36 @@ import type { Request, Response } from "express";
 
 import { pool } from "../db/db.js";
 
-const CURRENT_SEMESTER = "2026summer";
+export const CURRENT_YEAR = "2026";
 
-type Term = "spring" | "summer" | "fall";
+export type Term = "spring" | "summer" | "fall";
 
-const SEMESTER_MATCH = /^(\d{4})(spring|summer|fall)$/.exec(CURRENT_SEMESTER);
+export const VALID_TERMS: Term[] = ["spring", "summer", "fall"];
 
-if (!SEMESTER_MATCH) {
-  throw new Error(
-    `CURRENT_SEMESTER "${CURRENT_SEMESTER}" is not in the expected "<year><term>" format.`,
-  );
+export function isTerm(value: string): value is Term {
+  return (VALID_TERMS as string[]).includes(value);
 }
 
-const CURRENT_YEAR = SEMESTER_MATCH[1] as string;
-const CURRENT_TERM = SEMESTER_MATCH[2] as Term;
+export function parseTermParam(req: Request): string {
+  const rawTerm = req.params.term;
+  return Array.isArray(rawTerm) ? (rawTerm[0] ?? "") : (rawTerm ?? "");
+}
+
+function getSessionUserId(req: Request, res: Response) {
+  const userId = req.session.userId;
+
+  if (!userId) {
+    res.status(401).json({
+      error: {
+        code: "UNAUTHENTICATED",
+        message: "You must be logged in to view courses.",
+      },
+    });
+    return null;
+  }
+
+  return userId;
+}
 
 // SFU course outline API types (https://www.sfu.ca/outlines/help/api.html)
 
@@ -64,68 +80,69 @@ type SavedCourseRow = {
   section: string;
 };
 
-export async function getUserCourses(req: Request, res: Response) {
-  const userId = Number(req.params.userId);
+export async function fetchCoursesForUser(userId: number, term: Term) {
+  const coursesResult = await pool.query<SavedCourseRow>(
+    `
+      SELECT sc.department, sc.course_number, sc.section
+      FROM course_collection_items cci
+      JOIN saved_courses sc ON sc.course_id = cci.course_id
+      WHERE cci.user_id = $1
+        AND cci.semester = $2
+        AND cci.year = $3
+    `,
+    [userId, term, Number(CURRENT_YEAR)],
+  );
 
-  if (!Number.isInteger(userId)) {
+  return Promise.all(
+    coursesResult.rows.map(async (row) => {
+      const outline = await getCourseOutline(
+        CURRENT_YEAR,
+        term,
+        row.department,
+        row.course_number,
+        row.section,
+      );
+
+      return {
+        department: row.department,
+        courseNumber: row.course_number,
+        section: row.section,
+        title: outline?.info.title ?? null,
+        schedule: outline?.courseSchedule ?? [],
+      };
+    }),
+  );
+}
+
+// Endpoint 1: GET /api/getcourse/:term - the logged-in user's own courses
+export async function getUserCourse(req: Request, res: Response) {
+  const sessionUserId = getSessionUserId(req, res);
+
+  if (!sessionUserId) {
+    return;
+  }
+
+  const term = parseTermParam(req);
+
+  if (!isTerm(term)) {
     return res.status(400).json({
-      error: "userId must be an integer.",
+      error: {
+        code: "INVALID_TERM",
+        message: "term must be one of: spring, summer, fall.",
+      },
     });
   }
 
   try {
-    const userResult = await pool.query(
-      `
-        SELECT user_id
-        FROM users
-        WHERE user_id = $1
-      `,
-      [userId],
-    );
-
-    if (userResult.rowCount !== 1) {
-      return res.status(404).json({
-        error: "User not found.",
-      });
-    }
-
-    const coursesResult = await pool.query<SavedCourseRow>(
-      `
-        SELECT sc.department, sc.course_number, sc.section
-        FROM course_collection_items cci
-        JOIN saved_courses sc ON sc.course_id = cci.course_id
-        WHERE cci.user_id = $1
-          AND cci.semester = $2
-          AND cci.year = $3
-      `,
-      [userId, CURRENT_TERM, Number(CURRENT_YEAR)],
-    );
-
-    const courses = await Promise.all(
-      coursesResult.rows.map(async (row) => {
-        const outline = await getCourseOutline(
-          CURRENT_YEAR,
-          CURRENT_TERM,
-          row.department,
-          row.course_number,
-          row.section,
-        );
-
-        return {
-          department: row.department,
-          courseNumber: row.course_number,
-          section: row.section,
-          title: outline?.info.title ?? null,
-          schedule: outline?.courseSchedule ?? [],
-        };
-      }),
-    );
-
+    const courses = await fetchCoursesForUser(sessionUserId, term);
     return res.status(200).json({ courses });
   } catch (error) {
     console.error("Failed to fetch user courses:", error);
     return res.status(500).json({
-      error: "Internal server error.",
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Internal server error.",
+      },
     });
   }
 }
