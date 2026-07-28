@@ -477,12 +477,26 @@ export const UserProfilePage: React.FC = () => {
                   >
                     Open schedule builder
                   </Link>
+                  <Link
+                    to="/scheduleviewer"
+                    style={{ ...styles.primaryButton, ...styles.linkButton }}
+                  >
+                    Open schedule viewer
+                  </Link>
                 <button type="button" onClick={handleLogout} style={styles.secondaryButton}>
                   Log out
                 </button>
                 </>
               ) : (
                 <>
+                  {profile.relationshipStatus === "friends" && (
+                    <Link
+                      to={`/scheduleviewer/${profile.user_id}`}
+                      style={{ ...styles.secondaryButton, ...styles.linkButton }}
+                    >
+                      View calendar
+                    </Link>
+                  )}
                   <button
                     type="button"
                     onClick={handleProfileRelationshipAction}
@@ -722,14 +736,22 @@ export const UserProfilePage: React.FC = () => {
                             {busyUserId === friend.user_id ? "Cancelling..." : "Cancel request"}
                           </button>
                         ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteFriendship(friend.user_id)}
-                            disabled={busyUserId === friend.user_id}
-                            style={styles.smallSecondaryButton}
-                          >
-                            {busyUserId === friend.user_id ? "Removing..." : "Remove friend"}
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteFriendship(friend.user_id)}
+                              disabled={busyUserId === friend.user_id}
+                              style={styles.smallSecondaryButton}
+                            >
+                              {busyUserId === friend.user_id ? "Removing..." : "Remove friend"}
+                            </button>
+                            <Link
+                              to={`/scheduleviewer/${friend.user_id}`}
+                              style={{ ...styles.smallGhostButton, ...styles.linkButton }}
+                            >
+                              View calendar
+                            </Link>
+                          </>
                         )}
                       </div>
                     </div>

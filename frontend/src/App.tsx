@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { LoginPage } from "./components/auth/LoginPage";
 import { RegisterPage } from "./components/auth/RegisterPage";
 import { ScheduleBuilderComponent } from "./components/schedule-builder/ScheduleBuilderComponent";
+import { ScheduleViewerComponent } from "./components/schedule-viewer/ScheduleViewerComponent";
 import { UserProfilePage } from "./components/profile/UserProfilePage";
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
@@ -35,6 +36,22 @@ export function App() {
             element={
               <ProtectedRoute>
                 <ScheduleBuilderComponent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/scheduleviewer"
+            element={
+              <ProtectedRoute>
+                <ScheduleViewerComponent />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/scheduleviewer/:friendUserId"
+            element={
+              <ProtectedRoute>
+                <ScheduleViewerComponent />
               </ProtectedRoute>
             }
           />
