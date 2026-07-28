@@ -17,6 +17,30 @@ const addFriendsToPack = async(client : PoolClient, pack_id: number, friends: nu
 
 const packHelpers = {
 
+    getPackById: async(pack_id : PackID) : Promise<Pack> =>{
+        const getPackQuery =
+        `
+        SELECT * FROM packs
+        WHERE pack_id = $1;
+        `;
+        const client = (await pool.connect()) as PoolClient;
+        try{
+            await client.query("BEGIN");
+            const result = (await client.query(
+                getPackQuery, [pack_id]
+            )) as QueryResult<Pack>;
+            
+            await client.query("COMMIT");
+            return result.rows[0] as Pack;
+
+        }catch(error){
+            await client.query("ROLLBACK");
+            throw error;
+        } finally {
+            client.release();
+        }
+    },
+
     getPacks: async(owner_id : number) : Promise<Pack[]> =>{
         const getPacksQuery =
         `
