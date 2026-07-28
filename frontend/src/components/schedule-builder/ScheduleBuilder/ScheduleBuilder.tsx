@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { Container, Col, Row, Form, FormControl, FormSelect, Table, Button } from 'react-bootstrap'
+import { Container, Col, Row, Form, FormControl, FormSelect, Table, Button, Card, FormLabel } from 'react-bootstrap'
 import { useYearsContext } from '../SFUCoursesAPISurface/yearsContext'
 import { useSemestersContext } from '../SFUCoursesAPISurface/semestersContext';
 import { useCoursesContext } from '../SFUCoursesAPISurface/coursesContext';
+import { useSelectedContext } from '../SFUCoursesAPISurface/selectedContext';
+import { trivial_offering_selection } from '../helpers';
 import '../bootstrap.min.css';
-import '../bootstrap.extension.css'
+import '../bootstrap_extension.css'
+
 
 function get_time_string_from_i(i: number) {
   return (
@@ -15,27 +18,27 @@ function get_time_string_from_i(i: number) {
 
 export function ScheduleBuilder() {
   let [search, search_setter] = useState("");
-  let [selected_courses, selected_courses_setter] = useState<{ department: string, c_number: string, c_title: string }[]>([])
+  let selected_interface = useSelectedContext();
   let year_interface = useYearsContext();
   let semesters_interface = useSemestersContext();
   let courses_interface = useCoursesContext();
   let [free_time, free_time_setter] = useState(Array.from({ length: 48 * 7 }, () => '0'))
-  let [current_courses, current_courses_setter] = useState<{ department: string, c_number: string, c_title: string }[]>([
-    { department: "cmpt", c_number: "300", c_title: "computer stuff a" },
-    { department: "cmpt", c_number: "301", c_title: "computer stuff b" },
-    { department: "cmpt", c_number: "404", c_title: "computer stuff i cannot find" },
-    { department: "macm", c_number: "101", c_title: "easy course" },
-    { department: "cmpt", c_number: "200", c_title: "waow" }
-  ]);
 
   // the courses which contain the search string and are not already selected
-  let filtered_courses = courses_interface.data.map(x => ({ department: x.department, courses: x.courses.filter(y => x.department.concat(y.c_number).concat(y.c_title).toLowerCase().replaceAll(' ', '').includes(search) && selected_courses.findIndex(c => x.department == c.department && y.c_number == c.c_number) == -1) }));
+  let filtered_courses = courses_interface.data.map(x => ({ department: x.department, courses: x.courses.filter(y => x.department.concat(y.c_number).concat(y.c_title).toLowerCase().replaceAll(' ', '').includes(search) && selected_interface.selected.findIndex(c => x.department == c.department && y.c_number == c.c_number) == -1) }));
   return (
     <div className='bootstrap-scope'>
       <Form onSubmit={(x) => {
         // send a post message with some json object
         // save this courseload into db
         x.preventDefault();
+        console.log('schedule with:',
+          'free_time: ', free_time.join(''),
+          'courses: ', selected_interface.selected.map(
+            (x) => (String(year_interface.selected.year) + ' ' + String(semesters_interface.selected.semester) + ' ' + String(x.department) + ' ' + String(x.c_number) + ' ')
+          ).join(''),
+          'offerings: ', selected_interface.selected_offerings
+        )
       }}>
         <Container>
           <Row>
@@ -48,7 +51,7 @@ export function ScheduleBuilder() {
                   // clear selected courses
                   // update year in state to selected year
                   // cascades to update semester then courses
-                  x => { selected_courses_setter([]); year_interface.selected_setter({ year: x.target.value }); }
+                  x => { selected_interface.clear(); year_interface.selected_setter({ year: x.target.value }); }
                 }>
                   {year_interface.data.map((x, y) => (<option value={x} key={y}>{x}</option>))}
                 </FormSelect>}
@@ -58,12 +61,11 @@ export function ScheduleBuilder() {
                   // clear selected courses
                   // update semester in state to selected semester
                   // cascades to update courses
-                  (x) => { selected_courses_setter([]); semesters_interface.selected_setter({ semester: x.target.value }) }
+                  (x) => { selected_interface.clear(); semesters_interface.selected_setter({ semester: x.target.value }) }
                 }>
                   {semesters_interface.data.map((x, y) => (<option value={x} key={y}>{x}</option>))}
                 </FormSelect>
               }
-
             </Col>
           </Row>
           <hr />
@@ -71,8 +73,9 @@ export function ScheduleBuilder() {
             <h3>
               current saved schedule:
             </h3>
-
             <Col>
+              {/* 
+              something like this if i display the current schedule
               {current_courses.length == 0 ? <Table><thead><tr><th>none</th></tr></thead></Table> :
                 <Table striped bordered>
                   <thead>
@@ -88,18 +91,15 @@ export function ScheduleBuilder() {
                     )}
                   </tbody>
                 </Table>
-              }
+              } */}
             </Col>
-
             <Col>
               <Button className='form-control' variant='success' type='submit'>overwrite with selected</Button>
             </Col>
-
           </Row>
           <hr />
           <h2>open availability time on campus</h2>
           <Row>
-
             <Col>
               <details>
                 <Table bordered className={'bs-extended-cell-hover'}>
@@ -127,40 +127,31 @@ export function ScheduleBuilder() {
                   <tbody>
                     {Array.from({ length: 48 }, (_, i) =>
                       <tr key={i}>
-                        <td onClick={() => console.log(i)}>{get_time_string_from_i(i)}</td>
+                        <td>{get_time_string_from_i(i)}</td>
                         {Array.from({ length: 7 }, (_, j) =>
-                          <td key={j} className={free_time[(i * 7) + j] == '1' ? 'bs-extended-on-cell' : 'bs-extended-off-cell'} onClick={() => { free_time_setter(prev => prev.map((x, k) => k == (i * 7) + j ? x == '0' ? '1' : '0' : x))}}>{free_time[i * 7 + j] == '1' ? 'o' : 'x'}</td>
+                          <td key={j} className={free_time[(i * 7) + j] == '1' ? 'bs-extended-on-cell' : 'bs-extended-off-cell'} onClick={() => { free_time_setter(prev => prev.map((x, k) => k == (i * 7) + j ? x == '0' ? '1' : '0' : x)) }}>{free_time[i * 7 + j] == '1' ? 'o' : 'x'}</td>
                         )}
                       </tr>)}
                   </tbody>
                 </Table>
               </details>
             </Col>
-
           </Row>
-            <hr />
-            <h2>
-              courses:
-            </h2>
+          <hr />
+          <h2>
+            courses:
+          </h2>
           <Row>
-
-            <Col>
-              <h3>filter available courses:</h3>
+            <Col xs={6} sm={6}>
+              <h3>
+                available:
+              </h3>
               <FormControl className='mb-2' type='text' placeholder='{search string}' onChange={
                 // set search string
                 (x) => { search_setter(x.target.value.toLowerCase().replaceAll(' ', '')) }
               }>
               </FormControl>
-            </Col>
-
-          </Row>
-          <Row>
-
-            <Col>
-              <h3>
-                available:
-              </h3>
-              {filtered_courses.length == 0 ? <Table><thead><tr><th>{courses_interface.isloading ? 'loading' : 'no courses found'}</th></tr></thead></Table> :
+              {filtered_courses.length == 0 ? <Table><thead><tr><th>{courses_interface.isloading ? 'loading...' : 'no courses found'}</th></tr></thead></Table> :
                 <Table striped bordered>
                   <thead>
                     <tr>
@@ -171,39 +162,87 @@ export function ScheduleBuilder() {
                   <tbody>
                     {filtered_courses.map(x => x.courses.map((y, i) =>
                       <tr key={i}>
-                        <td><Button variant='link' onClick={ // insert sorted into the selected list
-                          () => selected_courses_setter(prev => prev.concat([{ c_number: y.c_number, c_title: y.c_title, department: x.department }]).toSorted((a, b) => a.department.localeCompare(b.department) * 2 + parseInt(a.c_number) - parseInt(b.c_number)))
+                        <td><Button variant='success' size='sm' disabled={selected_interface.loading} onClick={ // insert sorted into the selected list
+                          () => selected_interface.add_course({ c_number: y.c_number, c_title: y.c_title, department: x.department })
                         }>(+)</Button></td>
                         <td colSpan={2}>{x.department.toUpperCase() + ': ' + y.c_number + ' ' + y.c_title}</td>
                       </tr>))}
                   </tbody>
                 </Table>}
             </Col>
-
             <Col>
               <h3>
                 selected:
               </h3>
-              {selected_courses.length == 0 ? <Table><thead><tr><th>empty</th></tr></thead></Table> :
-                <Table striped bordered>
-                  <thead>
-                    <tr>
-                      <th>drop</th>
-                      <th>course</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {selected_courses.map((x, i) =>
-                      <tr key={i}>
-                        <td><Button variant='link' onClick={ // remove a course from the selected list
-                          () => selected_courses_setter(prev => prev.filter(c => c.c_number != x.c_number && c.c_number != x.department))
-                        }>(x)</Button></td>
-                        <td>{x.department.toUpperCase() + ': ' + x.c_number + ' ' + x.c_title}</td>
-                      </tr>)}
-                  </tbody>
-                </Table>}
+              {selected_interface.selected.length == 0 ? <Table><thead><tr><th>empty</th></tr></thead></Table> :
+                <Container>
+                  <Row>
+                    {selected_interface.selected.map((crs, crs_i) =>
+                      <Col key={crs_i} xs={6} sm={6}>
+                        <Card className='mb-2' key={crs_i}>
+                          <Card.Header>{crs.department.toUpperCase() + ': ' + crs.c_number + ' ' + crs.c_title}</Card.Header>
+                          <Card.Body>
+                            {selected_interface.loading ? <p>loading...</p> :
+                              selected_interface.offerings[crs_i].length == 0 ? <></> :
+                                <>
+                                  {selected_interface.selected_offerings[crs_i] == null ? <></> :
+                                    <>
+                                      <FormLabel>offering:</FormLabel>
+                                      <FormSelect className='mb-2' onChange={(x) => { selected_interface.selected_offerings_setter(prev => prev.map((val, i) => i == crs_i ? trivial_offering_selection(crs_i, Number(x.target.value), selected_interface.offerings) : { ...val })) }}>
+                                        {selected_interface.offerings[crs_i].map((_, associated) => (
+                                          <option key={associated} value={associated}>{associated + 1}</option>)
+                                        )}
+                                      </FormSelect>
+                                    </>}
+                                  {selected_interface.selected_offerings[crs_i].lec == null ? <></> :
+                                    <>
+                                      <FormLabel>lec:</FormLabel>
+                                      <FormSelect className='mb-2' onChange={(x) => { selected_interface.selected_offerings_setter(prev => prev.map((val, index) => crs_i == index ? { ...val, lec: x.target.value } : { ...val })) }}>
+                                        {selected_interface.offerings[crs_i][selected_interface.selected_offerings[crs_i].associated ?? 0].classes.lecs.map((lec, acc) => (
+                                          <option key={acc} value={lec}>{lec}</option>)
+                                        )}
+                                      </FormSelect>
+                                    </>}
+                                  {selected_interface.selected_offerings[crs_i].tut == null ? <></> :
+                                    <>
+                                      <FormLabel>tut:</FormLabel>
+                                      <FormSelect className='mb-2' onChange={(x) => { selected_interface.selected_offerings_setter(prev => prev.map((val, index) => crs_i == index ? { ...val, tut: x.target.value } : { ...val })) }}>
+                                        {selected_interface.offerings[crs_i][selected_interface.selected_offerings[crs_i].associated ?? 0].classes.tuts.map((tut, acc) => (
+                                          <option key={acc} value={tut}>{tut}</option>)
+                                        )}
+                                      </FormSelect>
+                                    </>}
+                                  {selected_interface.selected_offerings[crs_i].lab == null ? <></> :
+                                    <>
+                                      <FormLabel>lab:</FormLabel>
+                                      <FormSelect className='mb-2' onChange={(x) => { selected_interface.selected_offerings_setter(prev => prev.map((val, index) => crs_i == index ? { ...val, lab: x.target.value } : { ...val })) }}>
+                                        {selected_interface.offerings[crs_i][selected_interface.selected_offerings[crs_i].associated ?? 0].classes.labs.map((lab, acc) => (
+                                          <option key={acc} value={lab}>{lab}</option>)
+                                        )}
+                                      </FormSelect>
+                                    </>}
+                                  {selected_interface.selected_offerings[crs_i].sem == null ? <></> :
+                                    <>
+                                      <FormLabel>sem:</FormLabel>
+                                      <FormSelect className='mb-2' onChange={(x) => { selected_interface.selected_offerings_setter(prev => prev.map((val, index) => crs_i == index ? { ...val, sem: x.target.value } : { ...val })) }}>
+                                        {selected_interface.offerings[crs_i][selected_interface.selected_offerings[crs_i].associated ?? 0].classes.sems.map((sem, acc) => (
+                                          <option key={acc} value={sem}>{sem}</option>)
+                                        )}
+                                      </FormSelect>
+                                    </>}
+                                </>
+                            }
+                          </Card.Body>
+                          <Card.Footer>
+                            <Button variant='danger' size='sm' disabled={selected_interface.loading} onClick={ // remove a course from the selected list
+                              () => selected_interface.remove_course(crs)}
+                            >(-)</Button>
+                          </Card.Footer>
+                        </Card>
+                      </Col>)}
+                  </Row>
+                </Container>}
             </Col>
-
           </Row>
         </Container>
       </Form>
