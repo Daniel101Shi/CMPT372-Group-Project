@@ -1,0 +1,27 @@
+.bootstrap-scope .bs-extended-cell-hover td:first-child {
+    background-color: inherit
+}
+
+.bootstrap-scope td.bs-extended-on-cell:hover {
+    background-color: lightpink;
+    border-color: lightpink;
+    border-width: 1px;
+}
+
+.bootstrap-scope td.bs-extended-off-cell:hover {
+    background-color: orange;
+    border-color: orange;
+    border-width: 1px;
+}
+
+.bootstrap-scope td.bs-extended-on-cell {
+    background-color: pink;
+    border-color: pink;
+    border-width: 1px;
+}
+
+.bootstrap-scope td.bs-extended-off-cell {
+    background-color: darkorange;
+    border-color: darkorange;
+    border-width: 1px;
+}
