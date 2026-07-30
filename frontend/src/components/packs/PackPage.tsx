@@ -68,6 +68,7 @@ export function PackPage() {
             }
             if(members.length === 0){
                 toast.error("At least one other pack member is necessary.");
+                return;
             }
             if (loading)
                 return;
@@ -93,7 +94,7 @@ export function PackPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error.message || "Failed to create new pack.");
+                throw new Error(data.error.message || "Failed to create new pack."); 
             }
 
             if (typeof data.pack !== "object" || data.pack === null) {
@@ -111,6 +112,7 @@ export function PackPage() {
             } else {
                 console.error("Unknown error occured");
             }
+            toast.error("Failed to create new pack.")
         }
     }
 
@@ -149,6 +151,7 @@ export function PackPage() {
             } else {
                 console.error("Unknown error occured");
             }
+            toast.error("Failed to fetch pack data.");
         }
     }
 
@@ -169,7 +172,6 @@ export function PackPage() {
                 throw new Error(data.error.message || "Failed to fetch packs.");
             }
 
-
             if (!Array.isArray(data.packs))
                 throw new Error("Invalid response: packs isn't an array");
 
@@ -181,6 +183,7 @@ export function PackPage() {
             } else {
                 console.error("Unknown error occured");
             }
+            toast.error("Failed to fetch packs.");
         }
 
     }
@@ -210,6 +213,7 @@ export function PackPage() {
             } else {
                 console.error("Unknown error occured");
             }
+            toast.error("Failed to delete pack.");
         }
     }
 
@@ -241,6 +245,7 @@ export function PackPage() {
             } else {
                 console.error("Unknown error occured");
             }
+            toast.error("Failed to edit pack.")
         }
     }
 

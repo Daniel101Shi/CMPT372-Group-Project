@@ -77,7 +77,9 @@ export function CreatePack({createNewPack, semester, year, setSemester, setYear}
             } else {
                 console.error("Unknown error occured");
             }
+            toast.error("Failed to load friends.");
         }
+        
     };
 
     const removeMember = (member: Friend)=>{

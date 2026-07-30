@@ -86,12 +86,18 @@ export const createPack = async(req: Request, res: Response): Promise<Response>=
 
         if(!new_pack){
             return res.status(400).json({
-                message: "new_pack is required."
-            });
+                error:{
+                    code: "NEW_PACK_REQUIRED",
+                    message: "new_pack is required."
+                }
+        });
         }
         if(!Array.isArray(friends)){
             return res.status(400).json({
-                message: "friends is required."
+                error:{
+                    code: "FRIENDS_REQUIRED",
+                    message: "friends is required."
+                }
             });
         }
 
