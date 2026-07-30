@@ -26,7 +26,7 @@ type CreatePackProps = {
     createNewPack: (group_name: string, members: Friend[]) => Promise<void>;
 };
 
-const apiUrl = import.meta.env.VITE_API_URL;
+const apiUrl = import.meta.env.VITE_API_URL || "";
 
 
 export function CreatePack({createNewPack, semester, year, setSemester, setYear} : CreatePackProps){
@@ -44,9 +44,8 @@ export function CreatePack({createNewPack, semester, year, setSemester, setYear}
     
 
     useEffect(()=>{
-        if(searchDropdown.length == 0)
-            fetchFriendships();
-    },[searchDropdown]);
+      fetchFriendships();
+    },[]);
 
     const fetchFriendships = async () => {
         try{

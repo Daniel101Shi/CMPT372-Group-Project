@@ -177,7 +177,7 @@ const packHelpers = {
     getPackMembers:  async(pack_id: PackID) : Promise<PackMember[]>=>{
         const getQuery = 
         `
-        SELECT pack_id, user_id, 
+        SELECT pack_id, user_id
         FROM pack_members
         WHERE pack_id = $1;
         `;

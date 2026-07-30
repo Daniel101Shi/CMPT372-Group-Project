@@ -1,6 +1,6 @@
 import { type PackID, type Pack } from "../../types/Pack.js";
 
-const isValidUserId = async (user_id: number): Promise<boolean> => {
+const isValidUserId = (user_id: number): boolean => {
     if (!Number.isInteger(user_id) || user_id <= 0) {
         return false;
     }
@@ -8,14 +8,14 @@ const isValidUserId = async (user_id: number): Promise<boolean> => {
 }
 
 export const packValidation = {
-    isValidUserId: async (user_id: number): Promise<boolean> => {
+    isValidUserId: (user_id: number): boolean => {
         if (!Number.isInteger(user_id) || user_id <= 0) {
             return false;
         }
         return true;
     },
 
-    areValidUserIds: async (users: number[]): Promise<boolean> => {
+    areValidUserIds: (users: number[]): boolean => {
         for (const user of users) {
             if (!isValidUserId(user))
                 return false;
@@ -23,7 +23,7 @@ export const packValidation = {
         return true;
     },
 
- isValidPackId: async (pack_id: PackID): Promise<boolean> => {
+ isValidPackId: (pack_id: PackID): boolean => {
         if (!Number.isInteger(pack_id) || pack_id <= 0) {
             return false;
         }
@@ -31,7 +31,7 @@ export const packValidation = {
     },
 
 
- validateCreatePackInput: async (new_pack: Pack): Promise<boolean> => {
+ validateCreatePackInput: (new_pack: Pack): boolean => {
         const owner_id = new_pack.owner_id as number;
         const group_name = new_pack.group_name as string;
         const semester = new_pack.semester as string;

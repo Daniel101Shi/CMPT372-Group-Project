@@ -65,7 +65,7 @@ export function PackSchedule({pack, members, clearChosenPack} : PackScheduleProp
         const columns = 7;
         const scheduleGrid: ScheduleCell[][] = Array.from({length: rows}, (_, row) : ScheduleCell[] =>
             Array.from({length: columns}, (_, col)  : ScheduleCell => {
-                const index = row*7 + col;
+                const index = col*48 + row;
                 const cell = Number(schedule_str[index]) as ScheduleCell;
                 if(cell !== 0 && cell !== 1 && cell !== 2)
                     throw new Error(`Invalid schedule value at index ${index}.`);

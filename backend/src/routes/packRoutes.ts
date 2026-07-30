@@ -6,7 +6,7 @@ const router = Router();
 
 router.get("/packs/get-pack-data/:owner_id/:pack_id", requireAuth, getPackData);
 router.get("/packs/get-packs/:owner_id", requireAuth, getPacks);
-router.get("/packs/get-pack-members/:pack_id", requireAuth, getPacks);
+router.get("/packs/get-pack-members/:pack_id", requireAuth, getPackMembers);
 router.post("/packs/create-pack", requireAuth, createPack);
 router.delete("/packs/delete-pack", requireAuth, deletePack);
 router.patch("/packs/edit-pack", requireAuth, editPack);

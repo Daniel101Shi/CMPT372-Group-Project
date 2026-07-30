@@ -3,7 +3,7 @@ import { type PackID, type Pack, type PackMember} from "../types/Pack.js";
 import { type UserInfo } from "../types/User.js";
 import { packHelpers } from "../db/packHelpers.js"
 import { packsErrors } from "../error_messages/packs.js";
-import { getRandomCampusSchedule } from "../mocks/schedules.js";
+import { getRandomCampusSchedule, printCampusScheduleGrid } from "../mocks/schedules.js";
 import { packValidation } from "./validation/packs.js";
 
 
@@ -73,6 +73,8 @@ export const getPacks = async(req: Request, res: Response): Promise<Response>=>{
 
 export const createPack = async(req: Request, res: Response): Promise<Response>=>{
         const new_pack = req.body.new_pack as Pack;
+        const owner_id : number = Number(req.session.userId);
+        new_pack.owner_id = owner_id;
 
         if(!packValidation.validateCreatePackInput(new_pack)){
             return packsErrors.invalidPackCreationInputResponse(res);
@@ -108,10 +110,23 @@ export const createPack = async(req: Request, res: Response): Promise<Response>=
 }
 
 export const deletePack = async(req: Request, res: Response): Promise<Response>=>{
+    const owner_id : number = Number(req.session.userId);
     const pack_id = req.body.pack_id as PackID; 
+   
+
     if(!packValidation.isValidPackId(pack_id)){
         return packsErrors.invalidPackIdResponse(res) as Response;
     }
+    const pack = await packHelpers.getPackById(pack_id);
+
+    if(!pack)
+        return packsErrors.packNotFoundResponse(res) as Response;     
+
+    if(pack.owner_id != owner_id){
+        return packsErrors.invalidOwnerResponse(res) as Response;
+    }
+
+    
     return packHelpers.deletePack(pack_id)
         .then(()=>{
             console.log("Succesfully deleted pack.");
@@ -124,16 +139,27 @@ export const deletePack = async(req: Request, res: Response): Promise<Response>=
                 console.error("Unknown error");
             return packsErrors.failedPackDeletionResponse(res);
         })
-            
 }
 
 
 
 export const getPackMembers = async(req: Request, res: Response): Promise<Response>=>{
+    const owner_id : number = Number(req.session.userId);
     const pack_id : PackID = Number(req.params.pack_id);
+
     if(!packValidation.isValidPackId(pack_id)){
         return packsErrors.invalidPackIdResponse(res) as Response;
     }
+    const pack = await packHelpers.getPackById(pack_id);
+
+    if(!pack)
+        return packsErrors.packNotFoundResponse(res) as Response;     
+
+    if(pack.owner_id != owner_id){
+        return packsErrors.invalidOwnerResponse(res) as Response;
+    }
+
+    
     return packHelpers.getPackMembers(pack_id)
         .then((members : PackMember[])=>{
             console.log("Succesfully retrieved pack members.");
@@ -158,6 +184,16 @@ export const editPack = async(req: Request, res: Response): Promise<Response>=>{
     if(!packValidation.isValidPackId(pack_id)){
         return packsErrors.invalidPackIdResponse(res) as Response;
     }
+
+    const pack = await packHelpers.getPackById(pack_id);
+
+    if(!pack)
+        return packsErrors.packNotFoundResponse(res) as Response;     
+
+    if(pack.owner_id != owner_id){
+        return packsErrors.invalidOwnerResponse(res) as Response;
+    }
+
 
     return packHelpers.editPack(edited_pack)
         .then((updated_pack : Pack)=>{

@@ -30,7 +30,7 @@ const defaultCPack: CompletePack = {
     members: []
 }
 
-const apiUrl = import.meta.env.VITE_API_URL;
+const apiUrl = import.meta.env.VITE_API_URL || "";
 
 export function PackPage() {
     const [chosenEditPack, setChosenEditPack] = useState<Pack>(defaultPack);
