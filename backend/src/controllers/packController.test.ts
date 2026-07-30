@@ -4,21 +4,41 @@ import { type Pack, type PackMember } from "../types/Pack.js";
 import { packHelpers } from "../db/packHelpers.js";
 import { type UserInfo } from "../types/User.js";
 import { getRandomCampusSchedule } from "../mocks/schedules.js";
-import app from "../app.js";
 import { getPackData } from "./packController.js";
+import express from "express";
+import session from "express-session";
+import packRoutes from "../routes/packRoutes.js";
 
+const testApp = express();
+const OWNER_ID = 7;
+testApp.use(express.json());
+
+testApp.use(
+  session({
+    secret: "test-secret",
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+
+testApp.use((req, _res, next) => {
+  req.session.userId = OWNER_ID;
+  next();
+});
+
+testApp.use("/api", packRoutes);
 
 const mockPacks: Pack[] = [
     {
       pack_id: 1,
-      owner_id: 7,
+      owner_id: 21,
       group_name: "Late Night Grinders",
       semester: "Fall",
       year: 2026,
     },
     {
       pack_id: 2,
-      owner_id: 7,
+      owner_id: 18,
       group_name: "Math Survivors",
       semester: "Spring",
       year: 2027,
@@ -40,7 +60,7 @@ const mockPacks: Pack[] = [
     year: 2026,
 };
 const mockOwner: UserInfo = {
-    user_id: 7,
+    user_id: OWNER_ID,
     username: "owner",
     contact_info: "owner@example.com",
     campus_schedule: "0".repeat(336),
@@ -89,11 +109,13 @@ describe("Pack routes", () => {
     beforeEach(()=>{
         vi.clearAllMocks();
     });
+
+    
     describe("GET /api/packs/get-pack-data/:owner_id/:pack_id", () => {
 
-        it("returns 400 status code when owner_id is invalid", async() => {
-            const response = await request(app).get(
-                "/api/packs/get-pack-data/0/2"
+        it("returns 400 status code when pack_id is invalid", async() => {
+            const response = await request(testApp).get(
+                "/api/packs/get-pack-data/7/0"
             );
             expect(response.status).toBe(400);
             expect(packHelpers.getPackById).not.toHaveBeenCalled();
@@ -107,7 +129,7 @@ describe("Pack routes", () => {
             vi.mocked(packHelpers.getPackById).mockResolvedValue(mockPack);
             vi.mocked(packHelpers.getPackOwnersInfo).mockResolvedValue(mockOwner);
             vi.mocked(packHelpers.getPackMembersUserInfo).mockResolvedValue(mockMembers);
-            const response = await request(app).get(
+            const response = await request(testApp).get(
                 "/api/packs/get-pack-data/7/42"
             );
             expect(response.status).toBe(200);
@@ -125,7 +147,7 @@ describe("Pack routes", () => {
             });
 
             expect(packHelpers.getPackById).toHaveBeenCalledWith(42);
-            expect(packHelpers.getPackOwnersInfo).toHaveBeenCalledWith(7);
+            expect(packHelpers.getPackOwnersInfo).toHaveBeenCalledWith(OWNER_ID);
             expect(packHelpers.getPackMembersUserInfo).toHaveBeenCalledWith(42);
 
             
@@ -133,18 +155,10 @@ describe("Pack routes", () => {
     });
 
     describe("GET /api/packs/get-packs/:owner_id", () => {
-        it("returns 400 status code when owner_id is invalid", async() => {
-            const response = await request(app).get(
-                "/api/packs/get-packs/0"
-            );
-            expect(response.status).toBe(400);
-            expect(packHelpers.getPacks).not.toHaveBeenCalled();
-        });
-
         it("returns packs when inputs are valid", async() => {
             vi.mocked(packHelpers.getPacks).mockResolvedValue(mockPacks);
 
-            const response = await request(app).get(
+            const response = await request(testApp).get(
                 "/api/packs/get-packs/2"
             );
 
@@ -154,7 +168,7 @@ describe("Pack routes", () => {
                 packs: mockPacks
             });
 
-            expect(packHelpers.getPacks).toHaveBeenCalledWith(2);
+            expect(packHelpers.getPacks).toHaveBeenCalledWith(OWNER_ID);
         });
     });
 
@@ -162,7 +176,7 @@ describe("Pack routes", () => {
 
     describe("GET /api/packs/get-pack-members/:pack_id", () => {
         it("returns 400 status code when pack_id is invalid", async() => {
-            const response = await request(app).get(
+            const response = await request(testApp).get(
                 "/api/packs/get-pack-members/0"
             );
             expect(response.status).toBe(400);
@@ -172,7 +186,7 @@ describe("Pack routes", () => {
         it("returns pack members when inputs are valid", async() => {
             vi.mocked(packHelpers.getPackMembers).mockResolvedValue(mockPackMembers);
 
-            const response = await request(app).get(
+            const response = await request(testApp).get(
                 "/api/packs/get-pack-members/2"
             );
 
@@ -192,12 +206,12 @@ describe("Pack routes", () => {
             const mock_friends : number[] = [3, 4, 9];
             const mock_pack : Pack = {
                 pack_id: 5,
-                owner_id: 7,
+                owner_id: OWNER_ID,
                 group_name: "",
                 semester: "Fall",
                 year: 2026,
             };
-            const response = await request(app).post(
+            const response = await request(testApp).post(
                 "/api/packs/create-pack"
             ).send({
                 new_pack: mock_pack,
@@ -219,7 +233,7 @@ describe("Pack routes", () => {
             const mock_friends : number[] = [3, 4, 9];
             vi.mocked(packHelpers.createPack).mockResolvedValue(mockPack);
 
-            const response = await request(app).post(
+            const response = await request(testApp).post(
                 "/api/packs/create-pack"
             ).send({
                 new_pack: mock_pack,
@@ -238,7 +252,7 @@ describe("Pack routes", () => {
 
     describe("DELETE /api/packs/delete-pack", () => {
         it("returns 400 status code when pack_id is invalid", async() => {
-            const response = await request(app).delete(
+            const response = await request(testApp).delete(
                 "/api/packs/delete-pack"
             ).send({pack_id: -1});
             expect(response.status).toBe(400);
@@ -247,7 +261,7 @@ describe("Pack routes", () => {
 
         it("calls deletePack when inputs are valid", async() => {
             vi.mocked(packHelpers.deletePack).mockResolvedValue();
-            const response = await request(app).delete(
+            const response = await request(testApp).delete(
                 "/api/packs/delete-pack"
             ).send({pack_id: 2});
 
@@ -260,12 +274,12 @@ describe("Pack routes", () => {
 
     describe("PATCH /api/packs/edit-pack", () => {
         
-        it("returns 400 status code when owner_id is invalid", async() => {
+        it("returns 400 status code when pack_id is invalid", async() => {
             const mock_pack : Pack = {
                 ...mockPack,
-                owner_id: -1
+                pack_id: -1
             }
-            const response = await request(app).patch(
+            const response = await request(testApp).patch(
                 "/api/packs/edit-pack"
             ).send({edited_pack: mock_pack});
             expect(response.status).toBe(400);
@@ -274,7 +288,7 @@ describe("Pack routes", () => {
 
         it("returns an updated pack when inputs are valid", async() => {
             vi.mocked(packHelpers.editPack).mockResolvedValue(mockPack);
-            const response = await request(app).patch(
+            const response = await request(testApp).patch(
                 "/api/packs/edit-pack"
             ).send({edited_pack: mockPack});
 

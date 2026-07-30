@@ -58,7 +58,7 @@ export const getPacks = async(req: Request, res: Response): Promise<Response>=>{
     }
     return packHelpers.getPacks(owner_id)
             .then((packs : Pack[])=>{
-                return res.status(201).json({packs});
+                return res.status(200).json({packs});
                 
             }).catch((error : unknown)=>{
                 if(error instanceof Error)
@@ -81,7 +81,14 @@ export const createPack = async(req: Request, res: Response): Promise<Response>=
 
         const friends : number[] = req.body.friends;
 
-        packValidation.areValidUserIds(friends);
+        if(!packValidation.areValidUserIds(friends)){
+            return res.status(400).json({
+                error:{
+                    code: "INVALID_USER_IDS",
+                    message: "friends user_ids are invalid"
+                }
+        });
+        };
 
         if(!new_pack){
             return res.status(400).json({
@@ -133,7 +140,7 @@ export const deletePack = async(req: Request, res: Response): Promise<Response>=
     
     return packHelpers.deletePack(pack_id)
         .then(()=>{
-            return res.status(201).json({message: "Succesfully deleted pack."});
+            return res.status(200).json({message: "Succesfully deleted pack."});
 
         }).catch((error: unknown)=>{
             if(error instanceof Error)
@@ -165,7 +172,7 @@ export const getPackMembers = async(req: Request, res: Response): Promise<Respon
     
     return packHelpers.getPackMembers(pack_id)
         .then((members : PackMember[])=>{
-            return res.status(201).json({members});
+            return res.status(200).json({members});
 
         }).catch((error: unknown)=>{
             if(error instanceof Error)
@@ -199,7 +206,7 @@ export const editPack = async(req: Request, res: Response): Promise<Response>=>{
 
     return packHelpers.editPack(edited_pack)
         .then((updated_pack : Pack)=>{
-            return res.status(201).json({updated_pack});
+            return res.status(200).json({updated_pack});
 
         }).catch((error: unknown)=>{
             if(error instanceof Error)
