@@ -1,12 +1,22 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { useAuth } from "../../context/AuthContext";
 import { CalendarView } from "./CalendarView";
 import { buildCourseColorMap } from "./courseColors";
+import { useSchedulePdfExport } from "./topdf";
 import type { Course } from "./types";
+
+
+// used AI for matching CSS with the home screen and the calendar view
 
 type Term = "spring" | "summer" | "fall";
 
+// must match the backend's hardcoded CURRENT_YEAR (getUserCourseController.ts)
+const CURRENT_YEAR = 2026;
+
+
+// used for friend's schedule, accessed through friend
 type FriendSchedule = {
   userId: number;
   username: string;
@@ -18,6 +28,7 @@ const TERMS: Term[] = ["spring", "summer", "fall"];
 const API_URL = import.meta.env.VITE_API_URL || "";
 
 export const ScheduleViewerComponent: React.FC = () => {
+  const { user } = useAuth();
   const { friendUserId } = useParams<{ friendUserId?: string }>();
   const [term, setTerm] = useState<Term>("fall");
   const [courses, setCourses] = useState<Course[]>([]);
@@ -40,7 +51,8 @@ export const ScheduleViewerComponent: React.FC = () => {
       setCourses(data.courses);
       setOwnerUsername(null);
     };
-
+    
+    // get all friend's course schedules. but only render that one friend with matching ID
     const loadFriendCourses = async (targetUserId: number) => {
       const response = await fetch(`${API_URL}/api/getfriendscourse/${term}`, {
         method: "GET",
@@ -81,21 +93,52 @@ export const ScheduleViewerComponent: React.FC = () => {
     loadCourses();
   }, [term, friendUserId]);
 
+  // colorMap = course key + color
   const colorMap = useMemo(() => buildCourseColorMap(courses), [courses]);
+  
+  // url for back button
   const backTo = friendUserId ? `/userprofile/${friendUserId}` : "/userprofile";
+
+  // custom heading
   const heading = ownerUsername ? `${ownerUsername}'s Calendar` : "Calendar";
+
+  // print-only heading: "{username} {Semester} {year}"
+  const displayName = ownerUsername ?? user?.username ?? "";
+  const termLabel = term.charAt(0).toUpperCase() + term.slice(1);
+  const printHeading = `${displayName} ${termLabel} ${CURRENT_YEAR}`;
+
+  const { printRef, exportToPdf } = useSchedulePdfExport(`${heading} - ${term}`);
 
   return (
     <div style={styles.page}>
-      <div style={styles.shell}>
+      <div style={styles.shell} className="schedule-print-shell" ref={printRef}>
         <aside style={styles.sidebar}>
-          <Link to={backTo} style={{ ...styles.secondaryButton, ...styles.linkButton }}>
+          <Link
+            to={backTo}
+            className="no-print"
+            style={{ ...styles.secondaryButton, ...styles.linkButton }}
+          >
             Back
           </Link>
 
-          <h1 style={styles.heroTitle}>{heading}</h1>
+          <div style={styles.titleRow}>
+            <h1 className="no-print" style={styles.heroTitle}>
+              {heading}
+            </h1>
+            <h1 className="print-only" style={{ ...styles.heroTitle, display: "none" }}>
+              {printHeading}
+            </h1>
+            <button
+              type="button"
+              className="no-print"
+              onClick={() => exportToPdf()}
+              style={{ ...styles.secondaryButton, ...styles.exportButton }}
+            >
+              Export PDF
+            </button>
+          </div>
 
-          <div style={styles.termColumn}>
+          <div style={styles.termColumn} className="no-print">
             {TERMS.map((t) => (
               <button
                 key={t}
@@ -122,7 +165,7 @@ export const ScheduleViewerComponent: React.FC = () => {
             ))}
           </div>
         </aside>
-
+          {/* double error check */}
         <main style={styles.calendarArea}>
           {error ? <p>{error}</p> : <CalendarView courses={courses} colorMap={colorMap} />}
         </main>
@@ -154,11 +197,23 @@ const styles: Record<string, React.CSSProperties> = {
     gap: "16px",
     overflowY: "auto",
   },
+  titleRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: "10px",
+  },
   heroTitle: {
     margin: 0,
     fontSize: "clamp(2rem, 3.5vw, 3rem)",
     lineHeight: 1.05,
     color: "#0f172a",
+  },
+  exportButton: {
+    minHeight: "34px",
+    padding: "0 12px",
+    fontSize: "13px",
   },
   termColumn: {
     display: "flex",
