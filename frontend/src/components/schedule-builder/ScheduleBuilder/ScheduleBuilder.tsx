@@ -6,6 +6,7 @@ import { useCoursesContext } from '../SFUCoursesAPISurface/coursesContext';
 import { useSelectedContext } from '../SFUCoursesAPISurface/selectedContext';
 import { useCurrentScheduleContext } from '../meAPISurface/currentScheduleContext';
 import { trivial_offering_selection } from '../helpers';
+import { Link } from 'react-router-dom';
 import '../bootstrap.min.css';
 import '../bootstrap_extension.css'
 
@@ -31,6 +32,10 @@ export function ScheduleBuilder() {
   let filtered_courses = courses_interface.data.map(x => ({ department: x.department, courses: x.courses.filter(y => x.department.concat(y.course_number).concat(y.course_title).toLowerCase().replaceAll(' ', '').includes(search) && selected_interface.selected.findIndex(c => x.department == c.department && y.course_number == c.course_number) == -1) }));
   return (
     <div className='bootstrap-scope'>
+      <Container><Row><Col xs={4} sm={4}>
+        <Link to='/userprofile' className='bs-extended-router-link form-control mb-3'
+        >Return To Home</Link>
+      </Col></Row></Container>
       <Form>
         <Container>
           <Row>
@@ -38,7 +43,7 @@ export function ScheduleBuilder() {
             <hr />
             <Col>
               <h2>select semester</h2>
-              {year_interface.isloading ? <FormSelect className='mb-2' disabled><option>loading...</option></FormSelect> :
+              {year_interface.isloading ? <FormSelect className='mb-3' disabled><option>loading...</option></FormSelect> :
                 <FormSelect className='mb-2' value={year_interface.selected.year} onChange={
                   // clear selected courses
                   // update year in state to selected year
@@ -66,7 +71,7 @@ export function ScheduleBuilder() {
             <Col>
               <h3>view current saved availability</h3>
               <details className='mb-3'>
-                <Table bordered className={'bs-extended-cell-hover'}>
+                <Table bordered className='bs-extended-cell-hover'>
                   <tbody>
                     <tr>
                       <td>key</td>
@@ -75,7 +80,7 @@ export function ScheduleBuilder() {
                     </tr>
                   </tbody>
                 </Table>
-                {current_interface.isloading ? 'loading...' : <Table bordered className={'bs-extended-cell-hover'}>
+                {current_interface.isloading ? 'loading...' : <Table bordered className='bs-extended-cell-hover'>
                   <thead>
                     <tr>
                       <th>@</th>
@@ -138,7 +143,7 @@ export function ScheduleBuilder() {
           </Row>
           <Row>
             <Col>
-              <Button className='form-control mb-3' variant='success' disabled={selected_interface.loading || current_interface.isloading}
+              <Button className='form-control mb-3 bs-extended-button' variant='success' disabled={selected_interface.loading || current_interface.isloading}
                 onClick={() => {
                   current_interface.update_current_availability({
                     availability: free_time.join('')
@@ -183,7 +188,7 @@ export function ScheduleBuilder() {
               }>
               </FormControl>
               {filtered_courses.length == 0 ? <Table><thead><tr><th>{courses_interface.isloading ? 'loading...' : 'no courses found'}</th></tr></thead></Table> :
-                <div className='mb-3' style={{ height: '50vh', maxHeight: '50vh', overflowY: 'scroll', borderStyle: 'solid', borderWidth: '1px' }}>
+                <div className='bs-extended-vertically-scrollable-container mb-3'>
                   <Table striped bordered >
                     <thead>
                       <tr>
@@ -194,7 +199,7 @@ export function ScheduleBuilder() {
                     <tbody>
                       {filtered_courses.map(x => x.courses.map((y, i) =>
                         <tr key={i}>
-                          <td><Button variant='success' size='sm' disabled={selected_interface.loading} onClick={ // insert sorted into the selected list
+                          <td><Button className='' variant='success' size='sm' disabled={selected_interface.loading} onClick={ // insert sorted into the selected list
                             () => selected_interface.add_course({ course_number: y.course_number, course_title: y.course_title, department: x.department })
                           }>(+)</Button></td>
                           <td colSpan={2}>{x.department.toUpperCase() + ': ' + y.course_number + ' ' + y.course_title}</td>
@@ -215,7 +220,7 @@ export function ScheduleBuilder() {
                   <Row>
                     {selected_interface.selected.map((crs, crs_i) =>
                       <Col key={crs_i} xs={3} sm={3}>
-                        <Card className='mb-2' key={crs_i}>
+                        <Card className='mb-3' key={crs_i}>
                           <Card.Header>{crs.department.toUpperCase() + ': ' + crs.course_number + ' ' + crs.course_title}</Card.Header>
                           <Card.Body>
                             {selected_interface.loading ? <p>loading...</p> :
@@ -270,7 +275,7 @@ export function ScheduleBuilder() {
                             }
                           </Card.Body>
                           <Card.Footer>
-                            <Button variant='danger' size='sm' disabled={selected_interface.loading} onClick={ // remove a course from the selected list
+                            <Button className='' variant='danger' size='sm' disabled={selected_interface.loading} onClick={ // remove a course from the selected list
                               () => selected_interface.remove_course(crs)}
                             >(-)</Button>
                           </Card.Footer>
@@ -282,7 +287,7 @@ export function ScheduleBuilder() {
           </Row>
           <Row>
             <Col>
-              <Button className='form-control mb-3' variant='success' disabled={selected_interface.loading || current_interface.isloading}
+              <Button className='form-control mb-3 bs-extended-button' variant='success' disabled={selected_interface.loading || current_interface.isloading}
                 onClick={() => {
                   // save this courseload into db
                   current_interface.update_current_courses({
