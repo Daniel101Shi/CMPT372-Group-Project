@@ -4,6 +4,12 @@ import { getCourseKey } from "./courseColors";
 import type { Course } from "./types";
 
 // SFU course outline API day abbreviations -> JS Date.getDay() weekday index.
+// Basically a translator from SFU's API to JS date objects.
+// used some AI to help me this specific mapping and split a single course into multiple independent events
+
+
+
+// SFU course outline API day abbreviations -> JS Date.getDay() weekday index.
 const DAY_ABBREVIATION_TO_WEEKDAY: Record<string, number> = {
   Su: 0,
   Mo: 1,

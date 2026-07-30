@@ -8,6 +8,11 @@ import { coursesToEvents } from "./calendarTransform";
 import type { CalendarEvent } from "./calendarTransform";
 import type { Course } from "./types";
 
+
+// used AI for matching CSS with the home screen
+// used AI for make calendar looks like a calendar with colored events.
+
+
 const locales = {
   "en-US": enUS,
 };
@@ -20,11 +25,11 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
+// date don't matter
 const MIN_TIME = new Date(1970, 0, 1, 8, 0, 0);
 const MAX_TIME = new Date(1970, 0, 1, 19, 0, 0);
 
 // hides the today-column highlight and the live current-time indicator line,
-// which don't make sense for a recurring weekly class schedule
 const HIDE_TODAY_AND_NOW_CSS = `
   .schedule-calendar .rbc-today { background-color: inherit; }
   .schedule-calendar .rbc-current-time-indicator { display: none; }
