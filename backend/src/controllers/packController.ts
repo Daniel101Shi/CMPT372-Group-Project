@@ -58,7 +58,6 @@ export const getPacks = async(req: Request, res: Response): Promise<Response>=>{
     }
     return packHelpers.getPacks(owner_id)
             .then((packs : Pack[])=>{
-                console.log("Succesfully retrieved packs.");
                 return res.status(201).json({packs});
                 
             }).catch((error : unknown)=>{
@@ -103,7 +102,6 @@ export const createPack = async(req: Request, res: Response): Promise<Response>=
 
         return packHelpers.createPack(new_pack, friends)
             .then((pack: Pack)=>{
-                console.log("Succesfully created pack.");
                 return res.status(201).json({pack});
                 
             }).catch((error : unknown)=>{
@@ -135,7 +133,6 @@ export const deletePack = async(req: Request, res: Response): Promise<Response>=
     
     return packHelpers.deletePack(pack_id)
         .then(()=>{
-            console.log("Succesfully deleted pack.");
             return res.status(201).json({message: "Succesfully deleted pack."});
 
         }).catch((error: unknown)=>{
@@ -168,7 +165,6 @@ export const getPackMembers = async(req: Request, res: Response): Promise<Respon
     
     return packHelpers.getPackMembers(pack_id)
         .then((members : PackMember[])=>{
-            console.log("Succesfully retrieved pack members.");
             return res.status(201).json({members});
 
         }).catch((error: unknown)=>{
@@ -203,7 +199,6 @@ export const editPack = async(req: Request, res: Response): Promise<Response>=>{
 
     return packHelpers.editPack(edited_pack)
         .then((updated_pack : Pack)=>{
-            console.log("Succesfully edited pack.");
             return res.status(201).json({updated_pack});
 
         }).catch((error: unknown)=>{
