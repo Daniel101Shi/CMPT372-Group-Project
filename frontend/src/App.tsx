@@ -5,6 +5,8 @@ import { RegisterPage } from "./components/auth/RegisterPage";
 import { ScheduleBuilderComponent } from "./components/schedule-builder/ScheduleBuilderComponent";
 import { ScheduleViewerComponent } from "./components/schedule-viewer/ScheduleViewerComponent";
 import { UserProfilePage } from "./components/profile/UserProfilePage";
+import { PackPage } from "./components/packs/PackPage";
+import { Toaster } from "sonner";
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -28,9 +30,19 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 export function App() {
   return (
+    <>
+    <Toaster richColors position="top-center" />
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+        <Route
+            path="/pack"
+            element={
+              <ProtectedRoute>
+                <PackPage/>
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="/schedulebuilder"
             element={
@@ -87,8 +99,17 @@ export function App() {
               </PublicOnlyRoute>
             }
           />
+          <Route
+            path="/register"
+            element={
+              <PublicOnlyRoute>
+                <RegisterPage />
+              </PublicOnlyRoute>
+            }
+          />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </>
   );
 }

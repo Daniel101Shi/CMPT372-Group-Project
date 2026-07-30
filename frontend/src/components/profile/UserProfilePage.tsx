@@ -3,14 +3,14 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useAuth } from "../../context/AuthContext";
 
-type FriendshipUser = {
+export type FriendshipUser = {
   user_id: number;
   username: string;
   contact_info?: string | null;
   created_at?: string;
 };
 
-type FriendshipDashboard = {
+export type FriendshipDashboard = {
   currentFriends: FriendshipUser[];
   incomingPendingRequests: FriendshipUser[];
   outgoingPendingRequests: FriendshipUser[];
@@ -476,6 +476,12 @@ export const UserProfilePage: React.FC = () => {
                     style={{ ...styles.primaryButton, ...styles.linkButton }}
                   >
                     Open schedule builder
+                  </Link>
+                  <Link
+                    to="/pack"
+                    style={{ ...styles.primaryButton, ...styles.linkButton }}
+                  >
+                    Create/View Packs
                   </Link>
                   <Link
                     to="/scheduleviewer"

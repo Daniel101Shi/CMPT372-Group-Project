@@ -1,0 +1,36 @@
+.schedule-heatmap-grid{
+    display: grid;
+    width: 100%;
+    column-gap: 2px;
+    row-gap: 2px;
+    grid-template-rows: auto;
+    grid-auto-rows: 36px;
+    align-content: start;
+    padding: 15px;
+    height: 50vh;
+    overflow-y: scroll;
+}
+
+.day-heading{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.time-label{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+
+.heatmap-cell{
+    border: 1px solid var(--bs-border-color, #dee2e6);
+    border-radius: 5px;
+    max-height: 32px;
+}
+
+.heatmap-cell.blank{
+    background-color: grey;
+    max-height: 32px;
+}
