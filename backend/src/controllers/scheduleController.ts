@@ -73,9 +73,7 @@ WHERE user_id = $1
 export async function fetch_schedule(req: Request, res: Response) {
   const me = await pool.connect()
   try {
-    if (req.session.userId === undefined) {
-      return res.status(400).json({message: 'unauthorised'})
-    }
+    if (req.session.userId === undefined) { throw new BadInputError('unauthorised') }
     let user_id = Number(req.session.userId)
     let str_year = String(req.params.year)
     let int_year = Number(str_year)
@@ -109,9 +107,7 @@ export async function upload_schedule(req: Request, res: Response) {
   const me = await pool.connect()
   try {
     await me.query('BEGIN TRANSACTION')
-    if (req.session.userId === undefined) {
-      return res.status(400).json({message: 'unauthorised'})
-    }
+    if (req.session.userId === undefined) { throw new BadInputError('unauthorised') }
     let user_id = Number(req.session.userId)
     let str_year = String(req.params.year)
     let int_year = Number(str_year)
@@ -148,7 +144,7 @@ export async function upload_schedule(req: Request, res: Response) {
     await me.query(clear_course_collection_items, [user_id, semester, int_year])
     // save new schedule to db
     for (let i of course_ids) {
-      me.query(insert_into_course_collection_items, [user_id, semester, int_year, i.course_id])
+      await me.query(insert_into_course_collection_items, [user_id, semester, int_year, i.course_id])
     }
 
     // update availability
@@ -157,8 +153,11 @@ export async function upload_schedule(req: Request, res: Response) {
     // yippee
     await me.query('COMMIT TRANSACTION')
 
+    // read
     const taken = (await me.query(show_taken, [user_id, int_year, semester])).rows
     const campus_schedule = (await me.query(show_availability, [user_id])).rows[0].campus_schedule
+
+    // share
     return res.status(201).json({ taking: taken, campus_schedule: campus_schedule })
   } catch (e) {
     await me.query('ROLLBACK TRANSACTION')

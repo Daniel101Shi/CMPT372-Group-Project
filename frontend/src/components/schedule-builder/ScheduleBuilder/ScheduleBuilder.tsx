@@ -64,12 +64,6 @@ export function ScheduleBuilder() {
           <h2>open availability time on campus</h2>
           <Row>
             <Col>
-              <Button className='form-control mb-3' variant='success' disabled={selected_interface.loading || current_interface.isloading}
-                onClick={() => {
-                  current_interface.update_current_availability({
-                    availability: free_time.join('')
-                  })
-                }}>overwrite campus availability with new campus availability</Button>
               <h3>view current saved availability</h3>
               <details className='mb-3'>
                 <Table bordered className={'bs-extended-cell-hover'}>
@@ -142,43 +136,20 @@ export function ScheduleBuilder() {
               </details>
             </Col>
           </Row>
-          <hr />
-          <h2>
-            courses:
-          </h2>
           <Row>
             <Col>
               <Button className='form-control mb-3' variant='success' disabled={selected_interface.loading || current_interface.isloading}
                 onClick={() => {
-                  // save this courseload into db
-                  current_interface.update_current_courses({
-                    courses:
-                      selected_interface.selected_offerings.flatMap((x, index) =>
-                        (x.lec != null ? [{
-                          department: selected_interface.selected[index].department,
-                          course_number: selected_interface.selected[index].course_number,
-                          section: x.lec
-                        }] : []).concat(
-                          x.tut != null ? [{
-                            department: selected_interface.selected[index].department,
-                            course_number: selected_interface.selected[index].course_number,
-                            section: x.tut
-                          }] : []).concat(
-                            x.lab != null ? [{
-                              department: selected_interface.selected[index].department,
-                              course_number: selected_interface.selected[index].course_number,
-                              section: x.lab
-                            }] : []).concat(
-                              x.sem != null ? [{
-                                department: selected_interface.selected[index].department,
-                                course_number: selected_interface.selected[index].course_number,
-                                section: x.sem
-                              }] : [])
-                      )
+                  current_interface.update_current_availability({
+                    availability: free_time.join('')
                   })
-                }}>overwrite saved course load with selected course load</Button>
+                }}>overwrite campus availability with new campus availability</Button>
             </Col>
           </Row>
+          <hr />
+          <h2>
+            courses:
+          </h2>
           <Row>
             <Col>
               <h3>current saved schedule:</h3>
@@ -202,34 +173,39 @@ export function ScheduleBuilder() {
             </Col>
           </Row>
           <Row>
-            <Col xs={6} sm={6}>
+            <Col>
               <h3>
                 available:
               </h3>
-              <FormControl className='mb-2' type='text' placeholder='{search string}' onChange={
+              <FormControl className='mb-2' type='text' placeholder='Search courses...' onChange={
                 // set search string
                 (x) => { search_setter(x.target.value.toLowerCase().replaceAll(' ', '')) }
               }>
               </FormControl>
               {filtered_courses.length == 0 ? <Table><thead><tr><th>{courses_interface.isloading ? 'loading...' : 'no courses found'}</th></tr></thead></Table> :
-                <Table striped bordered>
-                  <thead>
-                    <tr>
-                      <th>add</th>
-                      <th>course</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered_courses.map(x => x.courses.map((y, i) =>
-                      <tr key={i}>
-                        <td><Button variant='success' size='sm' disabled={selected_interface.loading} onClick={ // insert sorted into the selected list
-                          () => selected_interface.add_course({ course_number: y.course_number, course_title: y.course_title, department: x.department })
-                        }>(+)</Button></td>
-                        <td colSpan={2}>{x.department.toUpperCase() + ': ' + y.course_number + ' ' + y.course_title}</td>
-                      </tr>))}
-                  </tbody>
-                </Table>}
+                <div className='mb-3' style={{ height: '50vh', maxHeight: '50vh', overflowY: 'scroll', borderStyle: 'solid', borderWidth: '1px' }}>
+                  <Table striped bordered >
+                    <thead>
+                      <tr>
+                        <th>add</th>
+                        <th>course</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered_courses.map(x => x.courses.map((y, i) =>
+                        <tr key={i}>
+                          <td><Button variant='success' size='sm' disabled={selected_interface.loading} onClick={ // insert sorted into the selected list
+                            () => selected_interface.add_course({ course_number: y.course_number, course_title: y.course_title, department: x.department })
+                          }>(+)</Button></td>
+                          <td colSpan={2}>{x.department.toUpperCase() + ': ' + y.course_number + ' ' + y.course_title}</td>
+                        </tr>))}
+                    </tbody>
+                  </Table>
+                </div>
+              }
             </Col>
+          </Row>
+          <Row>
             <Col>
               <h3>
                 selected:
@@ -238,7 +214,7 @@ export function ScheduleBuilder() {
                 <Container>
                   <Row>
                     {selected_interface.selected.map((crs, crs_i) =>
-                      <Col key={crs_i} xs={6} sm={6}>
+                      <Col key={crs_i} xs={3} sm={3}>
                         <Card className='mb-2' key={crs_i}>
                           <Card.Header>{crs.department.toUpperCase() + ': ' + crs.course_number + ' ' + crs.course_title}</Card.Header>
                           <Card.Body>
@@ -304,8 +280,43 @@ export function ScheduleBuilder() {
                 </Container>}
             </Col>
           </Row>
+          <Row>
+            <Col>
+              <Button className='form-control mb-3' variant='success' disabled={selected_interface.loading || current_interface.isloading}
+                onClick={() => {
+                  // save this courseload into db
+                  current_interface.update_current_courses({
+                    courses:
+                      selected_interface.selected_offerings.flatMap((x, index) =>
+                        (x.lec != null ? [{
+                          department: selected_interface.selected[index].department,
+                          course_number: selected_interface.selected[index].course_number,
+                          section: x.lec
+                        }] : []).concat(
+                          x.tut != null ? [{
+                            department: selected_interface.selected[index].department,
+                            course_number: selected_interface.selected[index].course_number,
+                            section: x.tut
+                          }] : []).concat(
+                            x.lab != null ? [{
+                              department: selected_interface.selected[index].department,
+                              course_number: selected_interface.selected[index].course_number,
+                              section: x.lab
+                            }] : []).concat(
+                              x.sem != null ? [{
+                                department: selected_interface.selected[index].department,
+                                course_number: selected_interface.selected[index].course_number,
+                                section: x.sem
+                              }] : [])
+                      )
+                  })
+                }}>overwrite saved course load with selected course load</Button>
+            </Col>
+          </Row>
         </Container>
       </Form>
+      <footer className='m-3'>
+      </footer>
     </div >
   )
 }
