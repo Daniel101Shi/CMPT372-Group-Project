@@ -5,28 +5,15 @@ import {
   fetchCoursesForUser,
   isTerm,
   parseTermParam,
+  getSessionUserId,
 } from "./getUserCourseController.js";
-
-function getSessionUserId(req: Request, res: Response) {
-  const userId = req.session.userId;
-
-  if (!userId) {
-    res.status(401).json({
-      error: {
-        code: "UNAUTHENTICATED",
-        message: "You must be logged in to view courses.",
-      },
-    });
-    return null;
-  }
-
-  return userId;
-}
 
 type FriendRow = {
   user_id: number;
   username: string;
 };
+
+// Reserve: for displaying all friend's course, not just a single pack's schedule.
 
 // Endpoint 2: GET /api/getfriendscourse/:term - the logged-in user's
 // courses plus the courses of every confirmed friend, combined into one JSON payload.
@@ -47,8 +34,12 @@ export async function getFriendsCourses(req: Request, res: Response) {
       },
     });
   }
+  // end of authentication
 
+  
   try {
+    // logged-in user's confirmed friends, not including the user
+    // not including pending friendships
     const friendsResult = await pool.query<FriendRow>(
       `
         SELECT
@@ -67,6 +58,7 @@ export async function getFriendsCourses(req: Request, res: Response) {
       [sessionUserId],
     );
 
+    // get users
     const selfResult = await pool.query<FriendRow>(
       `
         SELECT user_id, username
@@ -75,9 +67,12 @@ export async function getFriendsCourses(req: Request, res: Response) {
       `,
       [sessionUserId],
     );
-
+    
+    // combine the logged-in user and their friends into one array
     const people = [...selfResult.rows, ...friendsResult.rows];
 
+    // get courses for each person
+    // from getUserCourseController.ts
     const schedules = await Promise.all(
       people.map(async (person) => ({
         userId: person.user_id,
