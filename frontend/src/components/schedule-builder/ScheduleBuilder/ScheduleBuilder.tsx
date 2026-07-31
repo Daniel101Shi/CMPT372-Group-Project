@@ -4,7 +4,9 @@ import { useYearsContext } from '../SFUCoursesAPISurface/yearsContext'
 import { useSemestersContext } from '../SFUCoursesAPISurface/semestersContext';
 import { useCoursesContext } from '../SFUCoursesAPISurface/coursesContext';
 import { useSelectedContext } from '../SFUCoursesAPISurface/selectedContext';
+import { useCurrentScheduleContext } from '../meAPISurface/currentScheduleContext';
 import { trivial_offering_selection } from '../helpers';
+import { Link } from 'react-router-dom';
 import '../bootstrap.min.css';
 import '../bootstrap_extension.css'
 
@@ -16,69 +18,32 @@ function get_time_string_from_i(i: number) {
   )
 }
 
-async function handle_post({year, semester, courses, availability}: {year: string, semester: string, courses: {department: string, c_number: string, section: string}[], availability: string}) {
-  const origin = new URL(window.location.href).origin
-  const res = await fetch(`${origin}/api/schedule/${year}/${semester}`, {
-    method: "POST",
-    credentials: "include",
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify(
-      {
-        courses: courses,
-        availability: availability
-      }
-    )})
-}
-
 export function ScheduleBuilder() {
   let [search, search_setter] = useState("");
+  let [free_time, free_time_setter] = useState(Array.from({ length: 48 * 7 }, () => '0'))
   let selected_interface = useSelectedContext();
   let year_interface = useYearsContext();
   let semesters_interface = useSemestersContext();
   let courses_interface = useCoursesContext();
-  let [free_time, free_time_setter] = useState(Array.from({ length: 48 * 7 }, () => '0'))
+  let current_interface = useCurrentScheduleContext();
+
 
   // the courses which contain the search string and are not already selected
-  let filtered_courses = courses_interface.data.map(x => ({ department: x.department, courses: x.courses.filter(y => x.department.concat(y.c_number).concat(y.c_title).toLowerCase().replaceAll(' ', '').includes(search) && selected_interface.selected.findIndex(c => x.department == c.department && y.c_number == c.c_number) == -1) }));
+  let filtered_courses = courses_interface.data.map(x => ({ department: x.department, courses: x.courses.filter(y => x.department.concat(y.course_number).concat(y.course_title).toLowerCase().replaceAll(' ', '').includes(search) && selected_interface.selected.findIndex(c => x.department == c.department && y.course_number == c.course_number) == -1) }));
   return (
     <div className='bootstrap-scope'>
-      <Form onSubmit={(x) => {
-        // send a post message with some json object
-        // save this courseload into db
-        x.preventDefault();
-        handle_post({year: year_interface.selected.year, semester: semesters_interface.selected.semester, availability: free_time.join(''), courses:
-          selected_interface.selected_offerings.flatMap((x, index) => 
-            (x.lec != null ? [{
-              department: selected_interface.selected[index].department,
-              c_number: selected_interface.selected[index].c_number,
-              section: x.lec
-            }] : []).concat(
-            x.tut != null ? [{
-              department: selected_interface.selected[index].department,
-              c_number: selected_interface.selected[index].c_number,
-              section: x.tut
-            }] : []).concat(
-            x.lab != null ? [{
-              department: selected_interface.selected[index].department,
-              c_number: selected_interface.selected[index].c_number,
-              section: x.lab
-            }] : []).concat(
-              x.sem != null ? [{
-              department: selected_interface.selected[index].department,
-              c_number: selected_interface.selected[index].c_number,
-              section: x.sem
-            }] : [])
-          )
-        }
-        )
-        }}>
+      <Container><Row><Col xs={4} sm={4}>
+        <Link to='/userprofile' className='bs-extended-router-link form-control mb-3'
+        >Return To Home</Link>
+      </Col></Row></Container>
+      <Form>
         <Container>
           <Row>
             <h1>schedule creation</h1>
             <hr />
             <Col>
               <h2>select semester</h2>
-              {year_interface.isloading ? <FormSelect className='mb-2' disabled><option>loading...</option></FormSelect> :
+              {year_interface.isloading ? <FormSelect className='mb-3' disabled><option>loading...</option></FormSelect> :
                 <FormSelect className='mb-2' value={year_interface.selected.year} onChange={
                   // clear selected courses
                   // update year in state to selected year
@@ -101,46 +66,52 @@ export function ScheduleBuilder() {
             </Col>
           </Row>
           <hr />
-          <Row>
-            <Col>
-              <h3>current saved schedule:</h3>
-              todo, just displays the current saved for semester
-              so the button feels responsive
-              and just cause its reasonable to display on this page
-              {/* 
-              something like this if i display the current schedule
-              {current_courses.length == 0 ? <Table><thead><tr><th>none</th></tr></thead></Table> :
-                <Table striped bordered>
-                  <thead>
-                    <tr>
-                      <th colSpan={2}>courses</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {current_courses.map((x, i) =>
-                      <tr key={i}>
-                        <td key={i}>{x.department.toUpperCase() + ': ' + x.c_number + ' ' + x.c_title}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </Table>
-              } */}
-            </Col>
-            <Col>
-              <Button className='form-control' variant='success' type='submit' disabled={selected_interface.loading}>overwrite with selected</Button>
-            </Col>
-          </Row>
-          <hr />
           <h2>open availability time on campus</h2>
           <Row>
             <Col>
-              <details>
+              <h3>view current saved availability</h3>
+              <details className='mb-3'>
+                <Table bordered className='bs-extended-cell-hover'>
+                  <tbody>
+                    <tr>
+                      <td>key</td>
+                      <td className='bs-extended-on-cell'>o: available</td>
+                      <td className='bs-extended-off-cell'>x: unavailable</td>
+                    </tr>
+                  </tbody>
+                </Table>
+                {current_interface.isloading ? 'loading...' : <Table bordered className='bs-extended-cell-hover'>
+                  <thead>
+                    <tr>
+                      <th>@</th>
+                      <th>monday</th>
+                      <th>tuesday</th>
+                      <th>wednesday</th>
+                      <th>thursday</th>
+                      <th>friday</th>
+                      <th>saturday</th>
+                      <th>sunday</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 48 }, (_, i) =>
+                      <tr key={i}>
+                        <td>{get_time_string_from_i(i)}</td>
+                        {Array.from({ length: 7 }, (_, j) =>
+                          <td key={j} className={current_interface.campus_schedule[(i * 7) + j] == '1' ? 'bs-extended-on-cell' : 'bs-extended-off-cell'}>{current_interface.campus_schedule[i * 7 + j] == '1' ? 'o' : 'x'}</td>
+                        )}
+                      </tr>)}
+                  </tbody>
+                </Table>}
+              </details>
+              <h3>select new availability:</h3>
+              <details className='mb-3'>
                 <Table bordered className={'bs-extended-cell-hover'}>
                   <tbody>
                     <tr>
                       <td>key</td>
-                      <td className='bs-extended-on-cell'>available</td>
-                      <td className='bs-extended-off-cell'>unavailable</td>
+                      <td className='bs-extended-on-cell'>o: available</td>
+                      <td className='bs-extended-off-cell'>x: unavailable</td>
                     </tr>
                   </tbody>
                 </Table>
@@ -170,39 +141,76 @@ export function ScheduleBuilder() {
               </details>
             </Col>
           </Row>
+          <Row>
+            <Col>
+              <Button className='form-control mb-3 bs-extended-button' variant='success' disabled={selected_interface.loading || current_interface.isloading}
+                onClick={() => {
+                  current_interface.update_current_availability({
+                    availability: free_time.join('')
+                  })
+                }}>overwrite campus availability with new campus availability</Button>
+            </Col>
+          </Row>
           <hr />
           <h2>
             courses:
           </h2>
           <Row>
-            <Col xs={6} sm={6}>
+            <Col>
+              <h3>current saved schedule:</h3>
+              {current_interface.isloading ? <Table><thead><tr><th>loading...</th></tr></thead></Table> :
+                current_interface.taking.length == 0 ? <Table><thead><tr><th>none</th></tr></thead></Table> :
+                  <Table striped bordered>
+                    <thead>
+                      <tr>
+                        <th >courses</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {current_interface.taking.map((x, i) =>
+                        <tr key={i}>
+                          <td key={i}>{x.department.toUpperCase() + ': ' + x.course_number.toUpperCase() + ' ' + x.section.toUpperCase()}</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </Table>
+              }
+            </Col>
+          </Row>
+          <Row>
+            <Col>
               <h3>
                 available:
               </h3>
-              <FormControl className='mb-2' type='text' placeholder='{search string}' onChange={
+              <FormControl className='mb-2' type='text' placeholder='Search courses...' onChange={
                 // set search string
                 (x) => { search_setter(x.target.value.toLowerCase().replaceAll(' ', '')) }
               }>
               </FormControl>
               {filtered_courses.length == 0 ? <Table><thead><tr><th>{courses_interface.isloading ? 'loading...' : 'no courses found'}</th></tr></thead></Table> :
-                <Table striped bordered>
-                  <thead>
-                    <tr>
-                      <th>add</th>
-                      <th>course</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered_courses.map(x => x.courses.map((y, i) =>
-                      <tr key={i}>
-                        <td><Button variant='success' size='sm' disabled={selected_interface.loading} onClick={ // insert sorted into the selected list
-                          () => selected_interface.add_course({ c_number: y.c_number, c_title: y.c_title, department: x.department })
-                        }>(+)</Button></td>
-                        <td colSpan={2}>{x.department.toUpperCase() + ': ' + y.c_number + ' ' + y.c_title}</td>
-                      </tr>))}
-                  </tbody>
-                </Table>}
+                <div className='bs-extended-vertically-scrollable-container mb-3'>
+                  <Table striped bordered >
+                    <thead>
+                      <tr>
+                        <th>add</th>
+                        <th>course</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filtered_courses.map(x => x.courses.map((y, i) =>
+                        <tr key={i}>
+                          <td><Button className='' variant='success' size='sm' disabled={selected_interface.loading} onClick={ // insert sorted into the selected list
+                            () => selected_interface.add_course({ course_number: y.course_number, course_title: y.course_title, department: x.department })
+                          }>(+)</Button></td>
+                          <td colSpan={2}>{x.department.toUpperCase() + ': ' + y.course_number + ' ' + y.course_title}</td>
+                        </tr>))}
+                    </tbody>
+                  </Table>
+                </div>
+              }
             </Col>
+          </Row>
+          <Row>
             <Col>
               <h3>
                 selected:
@@ -211,9 +219,9 @@ export function ScheduleBuilder() {
                 <Container>
                   <Row>
                     {selected_interface.selected.map((crs, crs_i) =>
-                      <Col key={crs_i} xs={6} sm={6}>
-                        <Card className='mb-2' key={crs_i}>
-                          <Card.Header>{crs.department.toUpperCase() + ': ' + crs.c_number + ' ' + crs.c_title}</Card.Header>
+                      <Col key={crs_i} xs={3} sm={3}>
+                        <Card className='mb-3' key={crs_i}>
+                          <Card.Header>{crs.department.toUpperCase() + ': ' + crs.course_number + ' ' + crs.course_title}</Card.Header>
                           <Card.Body>
                             {selected_interface.loading ? <p>loading...</p> :
                               selected_interface.offerings[crs_i].length == 0 ? <></> :
@@ -267,7 +275,7 @@ export function ScheduleBuilder() {
                             }
                           </Card.Body>
                           <Card.Footer>
-                            <Button variant='danger' size='sm' disabled={selected_interface.loading} onClick={ // remove a course from the selected list
+                            <Button className='' variant='danger' size='sm' disabled={selected_interface.loading} onClick={ // remove a course from the selected list
                               () => selected_interface.remove_course(crs)}
                             >(-)</Button>
                           </Card.Footer>
@@ -277,8 +285,43 @@ export function ScheduleBuilder() {
                 </Container>}
             </Col>
           </Row>
+          <Row>
+            <Col>
+              <Button className='form-control mb-3 bs-extended-button' variant='success' disabled={selected_interface.loading || current_interface.isloading}
+                onClick={() => {
+                  // save this courseload into db
+                  current_interface.update_current_courses({
+                    courses:
+                      selected_interface.selected_offerings.flatMap((x, index) =>
+                        (x.lec != null ? [{
+                          department: selected_interface.selected[index].department,
+                          course_number: selected_interface.selected[index].course_number,
+                          section: x.lec
+                        }] : []).concat(
+                          x.tut != null ? [{
+                            department: selected_interface.selected[index].department,
+                            course_number: selected_interface.selected[index].course_number,
+                            section: x.tut
+                          }] : []).concat(
+                            x.lab != null ? [{
+                              department: selected_interface.selected[index].department,
+                              course_number: selected_interface.selected[index].course_number,
+                              section: x.lab
+                            }] : []).concat(
+                              x.sem != null ? [{
+                                department: selected_interface.selected[index].department,
+                                course_number: selected_interface.selected[index].course_number,
+                                section: x.sem
+                              }] : [])
+                      )
+                  })
+                }}>overwrite saved course load with selected course load</Button>
+            </Col>
+          </Row>
         </Container>
       </Form>
-    </div>
+      <footer className='m-3'>
+      </footer>
+    </div >
   )
 }
