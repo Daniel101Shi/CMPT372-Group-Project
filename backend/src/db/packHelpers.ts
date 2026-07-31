@@ -17,6 +17,25 @@ const addFriendsToPack = async(client : PoolClient, pack_id: number, friends: nu
 
 const packHelpers = {
 
+    // returns whichever of the given ids are NOT accepted friends of owner_id.
+    // empty result means every one of them is fine to add to a pack.
+    // friendships are stored one row per pair in either direction, hence the OR.
+    getNonFriendIds: async(owner_id: number, candidate_ids: number[]) : Promise<number[]> =>{
+        const q =
+        `
+        SELECT c.user_id
+        FROM unnest($2::int[]) AS c(user_id)
+        WHERE NOT EXISTS (
+            SELECT 1 FROM friendships f
+            WHERE f.pending = FALSE
+              AND ((f.user_id_1 = $1 AND f.user_id_2 = c.user_id)
+                OR (f.user_id_2 = $1 AND f.user_id_1 = c.user_id))
+        )
+        `;
+        const result = await pool.query(q, [owner_id, candidate_ids]);
+        return result.rows.map((row) => row.user_id as number);
+    },
+
     getPackById: async(pack_id : PackID) : Promise<Pack> =>{
         const getPackQuery =
         `

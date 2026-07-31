@@ -67,13 +67,34 @@ export const getPacks = async(req: Request, res: Response): Promise<Response>=>{
 export const createPack = async(req: Request, res: Response): Promise<Response>=>{
         const new_pack = req.body.new_pack as Pack;
         const owner_id : number = Number(req.session.userId);
+
+        // shape checks first. areValidUserIds loops over friends, so anything that isn't an
+        // array has to be rejected before we get there or it throws.
+        if(!new_pack){
+            return res.status(400).json({
+                error:{
+                    code: "NEW_PACK_REQUIRED",
+                    message: "new_pack is required."
+                }
+        });
+        }
+
+        const friends : number[] = req.body.friends;
+
+        if(!Array.isArray(friends)){
+            return res.status(400).json({
+                error:{
+                    code: "FRIENDS_REQUIRED",
+                    message: "friends is required."
+                }
+            });
+        }
+
         new_pack.owner_id = owner_id;
 
         if(!packValidation.validateCreatePackInput(new_pack)){
             return packsErrors.invalidPackCreationInputResponse(res);
         }
-
-        const friends : number[] = req.body.friends;
 
         if(!packValidation.areValidUserIds(friends)){
             return res.status(400).json({
@@ -84,24 +105,26 @@ export const createPack = async(req: Request, res: Response): Promise<Response>=
         });
         };
 
-        if(!new_pack){
-            return res.status(400).json({
-                error:{
-                    code: "NEW_PACK_REQUIRED",
-                    message: "new_pack is required."
-                }
-        });
-        }
-        if(!Array.isArray(friends)){
-            return res.status(400).json({
-                error:{
-                    code: "FRIENDS_REQUIRED",
-                    message: "friends is required."
-                }
-            });
+        // same id twice would violate the pack_members primary key
+        const unique_friends = [...new Set(friends)];
+
+        // the frontend only offers your friends in the picker, but that's just the UI. without
+        // this check anyone can post an arbitrary user_id and read that user's contact info
+        // and campus schedule back out of get-pack-data.
+        try{
+            const non_friends = await packHelpers.getNonFriendIds(owner_id, unique_friends);
+            if(non_friends.length > 0){
+                return packsErrors.notFriendsResponse(res);
+            }
+        }catch(error){
+            if(error instanceof Error)
+                console.error(error.message);
+            else
+                console.error("Unknown error");
+            return packsErrors.failedPackCreationResponse(res);
         }
 
-        return packHelpers.createPack(new_pack, friends)
+        return packHelpers.createPack(new_pack, unique_friends)
             .then((pack: Pack)=>{
                 return res.status(201).json({pack});
                 

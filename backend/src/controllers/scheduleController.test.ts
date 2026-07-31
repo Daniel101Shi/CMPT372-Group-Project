@@ -237,6 +237,18 @@ let db: {
   saved_courses: SavedCourseRow[];
 }
 
+// the controller still grabs pool.connect() itself for the transaction, so this needs
+// mocking too or the tests open a real db connection and 500 on any machine that can't
+// reach ours. it only ever does BEGIN/COMMIT/ROLLBACK and release with the client.
+vi.mock('../db/db.js', () => ({
+  pool: {
+    connect: vi.fn().mockResolvedValue({
+      query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+      release: vi.fn(),
+    }),
+  },
+}));
+
 // MOCKS DATABASE SURFACE
 // i needed to rewrite all my query logic for these, cringe.
 vi.mock('../db/schedule_db_surface.js', () => ({

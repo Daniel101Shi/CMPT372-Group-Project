@@ -7,6 +7,7 @@ import { Row, Col, Container, Card, Button } from "react-bootstrap"
 import { PackSchedule } from "./PackSchedule";
 import { CreatePack } from "./CreatePack";
 import { useAuth } from "../../context/AuthContext";
+import { readApiError } from "../../utils/apiError";
 import { SemestersContextProvider } from "../schedule-builder/SFUCoursesAPISurface/semestersContext";
 import { YearsContextProvider } from "../schedule-builder/SFUCoursesAPISurface/yearsContext";
 import "./packs.css"
@@ -94,7 +95,7 @@ export function PackPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error.message || "Failed to create new pack."); 
+                throw new Error(readApiError(data, "Failed to create new pack.")); 
             }
 
             if (typeof data.pack !== "object" || data.pack === null) {
@@ -136,7 +137,7 @@ export function PackPage() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error.message || "Failed to fetch pack data.");
+                throw new Error(readApiError(data, "Failed to fetch pack data."));
             }
             
             const members: UserInfo[] = data.pack_data;
@@ -169,7 +170,7 @@ export function PackPage() {
             });
             const data = await response.json();
             if (!response.ok) {
-                throw new Error(data.error.message || "Failed to fetch packs.");
+                throw new Error(readApiError(data, "Failed to fetch packs."));
             }
 
             if (!Array.isArray(data.packs))
@@ -204,7 +205,7 @@ export function PackPage() {
             });
             const data = await response.json();
             if (!response.ok) {
-                throw new Error(data.error.message || "Failed to delete pack.");
+                throw new Error(readApiError(data, "Failed to delete pack."));
             }
             setPacks(packs.filter((pack)=> pack.pack_id != pack_id));
         }catch(error){
@@ -231,7 +232,7 @@ export function PackPage() {
             });
             const data = await response.json();
             if (!response.ok) {
-                throw new Error(data.error.message || "Failed to edit pack.");
+                throw new Error(readApiError(data, "Failed to edit pack."));
             }
             const updated_pack = data.updated_pack as Pack;
             setPacks((currentPacks)=>

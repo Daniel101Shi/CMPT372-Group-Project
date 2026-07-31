@@ -2,6 +2,8 @@
 // (await pool.query('SELECT ... FROM {X}')).rows[{i}]
 // for some (X, i)
 
+import { type Role } from "./User.js";
+
 export interface UserRow {
   user_id: number, // unique
   username: string, // upto 50 characters
@@ -9,7 +11,19 @@ export interface UserRow {
   contact_info: string, // upto 50 characters, nullable
   campus_schedule: string, // 336 characters only '0' and '1's // suggested_change: should be stored in course_collection
   created_at: string // in the datetime string format, meaning it can be immediately passed to Date() to get a Date object
+  role: Role // 'user' | 'admin', constrained by chk_valid_role
   // key: (user_id)
+}
+
+// what the admin user list returns. no password_hash, plus a couple of counts.
+export interface AdminUserRow {
+  user_id: number,
+  username: string,
+  contact_info: string | null,
+  role: Role,
+  created_at: string,
+  pack_count: number,
+  friend_count: number
 }
 
 export interface SavedCourseRow {

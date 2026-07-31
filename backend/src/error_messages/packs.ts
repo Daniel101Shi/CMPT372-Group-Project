@@ -19,6 +19,17 @@ const packsErrors = {
         });
     },
 
+    // you can only put your own friends in a pack. without this you could name any user_id
+    // and read back their contact info and schedule, which the profile endpoint hides.
+    notFriendsResponse: (res: Response) : Response => {
+        return res.status(403).json({
+            error:{
+                code: "NOT_FRIENDS",
+                message: "You can only add your friends to a pack."
+            }
+        });
+    },
+
     packNotFoundResponse: (res: Response) : Response => {
         return res.status(404).json({
             error:{

@@ -1,5 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 
+import { readApiError } from "../utils/apiError";
+
+export type Role = "user" | "admin";
+
 //matches sql schema
 export interface User {
   user_id: number;
@@ -7,6 +11,7 @@ export interface User {
   contact_info?: string | null;
   campus_schedule?: string;
   created_at?: string;
+  role?: Role;
 }
 
 interface AuthContextType {
@@ -64,7 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(data.user);
         return { success: true };
       }
-      return { success: false, error: data.error || "Login failed." };
+      return { success: false, error: readApiError(data, "Login failed.") };
     } catch (error) {
       console.error("Login error:", error);
       return { success: false, error: "Network error during login." };
@@ -85,7 +90,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(data.user);
         return { success: true };
       }
-      return { success: false, error: data.error || "Registration failed." };
+      return { success: false, error: readApiError(data, "Registration failed.") };
     } catch (error) {
       console.error("Registration error:", error);
       return { success: false, error: "Network error during registration." };
