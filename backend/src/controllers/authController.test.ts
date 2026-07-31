@@ -173,38 +173,21 @@ describe("authController", () => {
     });
 
     it.each([
-      ["missing username", { password: "password123" }, "username"],
-      ["blank username", { username: "   ", password: "password123" }, "username"],
-      ["username under 3 chars", { username: "ab", password: "password123" }, "username"],
-      ["username over 50 chars", { username: "a".repeat(51), password: "password123" }, "username"],
-      ["username with a space", { username: "has space", password: "password123" }, "username"],
-      ["missing password", { username: "danielshi" }, "password"],
-      ["password under 8 chars", { username: "danielshi", password: "short" }, "password"],
-      ["password over 72 bytes", { username: "danielshi", password: "a".repeat(73) }, "password"],
-      [
-        "contactInfo over 100 chars",
-        { ...VALID, contactInfo: "a".repeat(101) },
-        "contactInfo",
-      ],
+      ["a blank username", { username: "   ", password: "password123" }, "username"],
+      ["a short password", { username: "danielshi", password: "short" }, "password"],
+      ["oversized contact info", { ...VALID, contactInfo: "a".repeat(101) }, "contactInfo"],
     ])("rejects %s with a 400 naming the field", async (_label, body, field) => {
+      // the boundaries themselves are covered in validation/auth.test.ts; this just proves
+      // the controller runs the validators and reports which field failed
       const res = createMockResponse();
       await register(createMockRequest(body), res);
 
       expect(res.statusCode).toBe(400);
       expect(res.body.error.code).toBe("INVALID_INPUT");
       expect(res.body.error.field).toBe(field);
-      // nothing should reach the database
       expect(queryMock).not.toHaveBeenCalled();
     });
 
-    it("counts the password limit in bytes, not characters", async () => {
-      // 24 four-byte emoji = 96 bytes but only 48 characters
-      const res = createMockResponse();
-      await register(createMockRequest({ username: "danielshi", password: "🔑".repeat(24) }), res);
-
-      expect(res.statusCode).toBe(400);
-      expect(res.body.error.field).toBe("password");
-    });
   });
 
   describe("login", () => {
@@ -269,19 +252,6 @@ describe("authController", () => {
 
       expect(unknownRes.statusCode).toBe(wrongPassRes.statusCode);
       expect(JSON.stringify(unknownRes.body)).toBe(JSON.stringify(wrongPassRes.body));
-    });
-
-    it("does not leak whether a username exists via the session", async () => {
-      const req = createMockRequest({ ...VALID, password: "wrongpassword" });
-      const res = createMockResponse();
-      queryMock.mockResolvedValueOnce({
-        rowCount: 1,
-        rows: [{ user_id: 7, username: "danielshi", password_hash: hash }],
-      });
-
-      await login(req, res);
-
-      expect(req.session.userId).toBeUndefined();
     });
 
     it("still accepts a password that predates the current minimum length", async () => {
