@@ -27,16 +27,14 @@ let SelectedContext = createContext<SelectedDat | null>(null);
 export function SelectedContextProvider({ children }: { children: React.ReactNode }) {
     let year_interface = useYearsContext();
     let semester_interface = useSemestersContext();
-
-    let [selected, selected_setter] = useState<{ department: string, c_number: string, c_title: string}[]>([])
+    let [selected, selected_setter] = useState<{ department: string, course_number: string, course_title: string}[]>([])
     let [offerings, offerings_setter] = useState<courseOfferings[][]>([])
     let [selected_offerings, selected_offerings_setter] = useState<{associated: number | null, lec: string | null, tut: string | null, lab: string | null, sem: string | null}[]>([]) 
     let [loading, load_state_setter] = useState(true);
-    
 
-    async function fetch_course_offerings(year: string, semester: string, department: string, c_number: string): Promise<courseOfferings[]>{
-        if (year.length == 0 || semester.length == 0 || department.length == 0 || c_number.length == 0) {return []}
-        let endpoint = `http://www.sfu.ca/bin/wcm/course-outlines?${year}/${semester}/${department}/${c_number}`
+    async function fetch_course_offerings(year: string, semester: string, department: string, course_number: string): Promise<courseOfferings[]>{
+        if (year.length == 0 || semester.length == 0 || department.length == 0 || course_number.length == 0) {return []}
+        let endpoint = `http://www.sfu.ca/bin/wcm/course-outlines?${year}/${semester}/${department}/${course_number}`
         const res = await fetch(endpoint, {
             method: "GET",
         });
@@ -84,9 +82,9 @@ export function SelectedContextProvider({ children }: { children: React.ReactNod
         return res_offerings
     }
 
-    async function fetch_offerings(year: string, semester: string, courses: {department: string, c_number: string}[]): Promise<courseOfferings[][]> {
+    async function fetch_offerings(year: string, semester: string, courses: {department: string, course_number: string}[]): Promise<courseOfferings[][]> {
         if (year.length == 0 || semester.length == 0) {return []}
-        const offerings = await Promise.all(courses.map(x => fetch_course_offerings(year, semester, x.department, x.c_number)))
+        const offerings = await Promise.all(courses.map(x => fetch_course_offerings(year, semester, x.department, x.course_number)))
         return offerings
     }
 
@@ -117,14 +115,14 @@ export function SelectedContextProvider({ children }: { children: React.ReactNod
         selected_setter([])
     }
 
-    function remove_course({department, c_number, c_title}: {department: string, c_number: string, c_title: string}) {
+    function remove_course({department, course_number, course_title}: {department: string, course_number: string, course_title: string}) {
         load_state_setter(true)
-        selected_setter(prev => prev.filter(x => x.department != department || x.c_number != c_number || x.c_title != c_title))
+        selected_setter(prev => prev.filter(x => x.department != department || x.course_number != course_number || x.course_title != course_title))
     }
 
-    function add_course({department, c_number, c_title}: {department: string, c_number: string, c_title: string}) {
+    function add_course({department, course_number, course_title}: {department: string, course_number: string, course_title: string}) {
         load_state_setter(true)
-        selected_setter(prev => prev.concat([{department, c_number, c_title}]).toSorted((a, b) => a.department.localeCompare(b.department) * 2 + parseInt(a.c_number) - parseInt(b.c_number)))
+        selected_setter(prev => prev.concat([{department, course_number, course_title}]).toSorted((a, b) => a.department.localeCompare(b.department) * 2 + parseInt(a.course_number) - parseInt(b.course_number)))
     }
 
     return (

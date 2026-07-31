@@ -15,8 +15,8 @@ export interface SemsDat {
 export interface deptCourses {
     department: string,
     courses: {
-        c_number: string,
-        c_title: string
+        course_number: string,
+        course_title: string
     }[]   
 }
 
@@ -37,11 +37,11 @@ export interface courseOfferings {
 export interface SelectedDat {
     selected: {
         department: string,
-        c_number: string,
-        c_title: string,
+        course_number: string,
+        course_title: string,
     }[]
-    add_course: ({department, c_number, c_title}: {department: string, c_number: string, c_title:string}) => void,
-    remove_course: ({department, c_number, c_title}: {department: string, c_number: string, c_title:string}) => void,
+    add_course: ({department, course_number, course_title}: {department: string, course_number: string, course_title: string}) => void,
+    remove_course: ({department, course_number, course_title}: {department: string, course_number: string, course_title: string}) => void,
     clear: () => void,
     loading: boolean,
     offerings: courseOfferings[][],
@@ -54,4 +54,20 @@ export interface SelectedDat {
             lab: string | null;
             sem: string | null;
         }[]>) => void
+}
+
+export interface CurrentDat {
+  isloading: boolean,
+  taking: {department: string, course_number: string, section: string }[],
+  campus_schedule: string,
+  update_current_courses: ({courses}: 
+    {
+      courses: {department: string, course_number: string, section: string}[],
+    }
+  ) => void,
+  update_current_availability: ({availability}: 
+    {
+      availability: string
+    }
+  ) => void
 }

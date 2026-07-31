@@ -71,129 +71,104 @@ WHERE user_id = $1
 //
 
 export async function fetch_schedule(req: Request, res: Response) {
-    const me = await pool.connect()
-    try {
-        let user_id = Number(req.session.userId)
-        let str_year = String(req.params.year)
-        let int_year = Number(str_year)
-        let semester = String(req.params.semester)
+  const me = await pool.connect()
+  try {
+    if (req.session.userId === undefined) { throw new BadInputError('unauthorised') }
+    let user_id = Number(req.session.userId)
+    let str_year = String(req.params.year)
+    let int_year = Number(str_year)
+    let semester = String(req.params.semester)
 
-        // checks
-        // TODO assert that the session userID is the userID of the signed in user
-        if (!/^\d+$/.test(str_year)) { throw new BadInputError(`invalid year: ${str_year}`) }
-        if (semester != 'fall' && semester != 'summer' && semester != 'spring') { throw new BadInputError(`invalid semester: ${semester}`)}
-        if (req.session.userId === undefined) { throw new BadInputError('request missing target user') }
-        
-        // read
-        const taken = (await me.query(show_taken, [user_id, int_year, semester])).rows
-        const campus_schedule = (await me.query(show_availability, [user_id])).rows[0]
+    // checks
+    // assert that the session userID is the userID of the signed in user
+    if (!/^\d+$/.test(str_year)) { throw new BadInputError(`invalid year: ${str_year}`) }
+    if (semester != 'fall' && semester != 'summer' && semester != 'spring') { throw new BadInputError(`invalid semester: ${semester}`) }
+    if (req.session.userId === undefined) { throw new BadInputError('request missing target user') }
 
-        // share
-        return res.status(200).json({taking: taken, campus_schedule: campus_schedule})
-    } catch (e) {
-        if (isBadInputError(e)) {
-            return res.status(400).json({message: e.message})
-        } else {
-            return res.status(500).json({message: 'failed'})
-        }
-    } finally {
-        me.release()
+    // read
+    const taken = (await me.query(show_taken, [user_id, int_year, semester])).rows
+    const campus_schedule = (await me.query(show_availability, [user_id])).rows[0].campus_schedule
+
+    // share
+    return res.status(200).json({ taking: taken, campus_schedule: campus_schedule })
+  } catch (e) {
+    if (isBadInputError(e)) {
+      return res.status(400).json({ message: e.message })
+    } else {
+      console.log(e)
+      return res.status(500).json({ message: 'failed' })
     }
+  } finally {
+    me.release()
+  }
 }
 
-// export async function upload_availability(req: Request, res: Response) {
-//     const me = await pool.connect()
-//     try {
-//         await me.query('BEGIN TRANSACTION')
-//         let user_id = Number(req.session.userId)
-//         let availability = String(req.body)
-//         // checks
-//         // TODO assert that the session userID is the userID of the signed in user to prevent editing cookies allowing you to set anyones schedule
-//         if (availability.length != 7 * 48) { throw new BadInputError(`availability must be 336 characters`) }
-//         if (!/^[01]+$/.test(availability)) { throw new BadInputError(`availability must be a string of '0's and '1's`) }
-//         if (req.session.userId === undefined) { throw new BadInputError('request missing target user') }
-
-//         // update availability to provided
-//         await me.query(update_availability, [user_id, availability])
-
-//         // yippee
-//         await me.query('COMMIT TRANSACTION')
-        
-//         return res.status(201).json({new_availability: availability})
-//     } catch (e) {
-//         await me.query('ROLLBACK TRANSACTION')
-//         if (isBadInputError(e)) {
-//             return res.status(400).json({message: e.message})
-//         } else {
-//             return res.status(500).json({message: 'failed'})
-//         }
-//     } finally {
-//         me.release()
-//     }
-// }
-
 export async function upload_schedule(req: Request, res: Response) {
-    const me = await pool.connect()
-    try{
-        await me.query('BEGIN TRANSACTION')
-        let user_id = Number(req.session.userId)
-        let str_year = String(req.params.year)
-        let int_year = Number(str_year)
-        let semester = String(req.params.semester)
-        let courses: {department: string, c_number: string, section: string}[] = req.body.courses
-        let availability: string = req.body.availability
-        // checks
-        // TODO assert that the session userID is the userID of the signed in user to prevent editing cookies allowing you to set anyones schedule
-        if (!/^\d+$/.test(str_year)) { throw new BadInputError(`invalid year: ${str_year}`) }
-        if (semester != 'fall' && semester != 'summer' && semester != 'spring') { throw new BadInputError(`invalid semester: ${semester}`)}
-        if (req.session.userId === undefined) { throw new BadInputError('request missing target user') }
-        if (availability.length != 7 * 48) { throw new BadInputError(`availability must be 336 characters`) }
-        courses.forEach(x => {
-            if (x.department.length > 10) { throw new BadInputError(`department: ${x.department}, data to big to fit in schema`) }
-            if (x.c_number.length > 10) { throw new BadInputError(`course number: ${x.c_number}, data to big to fit in schema`) }
-            if (x.section.length > 10) { throw new BadInputError(`section: ${x.section}, data to big to fit in schema`) }
-        })
-        
-        // create an entry in the course_collections table signifying user X has a schedule for semester S and year Y
-        await me.query(insert_into_course_collections, [user_id, semester, int_year])
-
-        // create an entry in the saved_courses table for any new_course
-        // get the id of each passed course (get course_id_i for each course_i of request) 
-        let course_ids = []
-        for (let x of courses) {
-            const get_course_id_args = [String(x.department.toUpperCase()), String(x.c_number.toUpperCase()), String(x.section.toUpperCase())]
-            await me.query(insert_into_saved_courses, get_course_id_args)
-            const my_course_id = await me.query(fetch_course_id, get_course_id_args)
-            course_ids.push(my_course_id.rows[0])
-        }
-
-        // clear current db copy of schedule
-        await me.query(clear_course_collection_items, [user_id, semester, int_year])
-        // save new schedule to db
-        for (let i of course_ids) {
-            me.query(insert_into_course_collection_items, [user_id, semester, int_year, i.course_id])
-        }
-
-        // update availability
-        await me.query(update_availability, [user_id, availability])
-
-        // yippee
-        await me.query('COMMIT TRANSACTION')
-
-        const taken = (await me.query(show_taken, [user_id, int_year, semester])).rows
-        const campus_schedule = (await me.query(show_availability, [user_id])).rows[0]
-
-        return res.status(201).json({int_year, semester, taking: taken, campus_schedule: campus_schedule})
-    } catch (e) {
-        await me.query('ROLLBACK TRANSACTION')
-        if (isBadInputError(e)) {
-            return res.status(400).json({message: e.message})
-        } else {
-            return res.status(500).json({message: 'failed'})
-        }
-    } finally {
-        console.log('hello')
-        me.release()
-    }
+  const me = await pool.connect()
+  try {
+    await me.query('BEGIN TRANSACTION')
+    if (req.session.userId === undefined) { throw new BadInputError('unauthorised') }
+    let user_id = Number(req.session.userId)
+    let str_year = String(req.params.year)
+    let int_year = Number(str_year)
+    let semester = String(req.params.semester)
+    let courses: { department: string, course_number: string, section: string }[] = req.body.courses ?? []
+    let availability: string = req.body.availability
+    // checks
+    // assert that the session userID is the userID of the signed in user to prevent editing cookies allowing you to set anyones schedule
+    if (!/^\d+$/.test(str_year)) { throw new BadInputError(`invalid year: ${str_year}`) }
+    if (semester != 'fall' && semester != 'summer' && semester != 'spring') { throw new BadInputError(`invalid semester: ${semester}`) }
+    if (req.session.userId === undefined) { throw new BadInputError('request missing target user') }
+    if (availability.length != 7 * 48) { throw new BadInputError(`availability must be 336 characters`) }
     
+    courses.forEach(x => {
+      if (x.department.length > 10) { throw new BadInputError(`department: ${x.department}, data to big to fit in schema`) }
+      if (x.course_number.length > 10) { throw new BadInputError(`course number: ${x.course_number}, data to big to fit in schema`) }
+      if (x.section.length > 10) { throw new BadInputError(`section: ${x.section}, data to big to fit in schema`) }
+    })
+
+    // create an entry in the course_collections table signifying user X has a schedule for semester S and year Y
+    await me.query(insert_into_course_collections, [user_id, semester, int_year])
+
+    // create an entry in the saved_courses table for any new_course
+    // get the id of each passed course (get course_id_i for each course_i of request) 
+    let course_ids = []
+    for (let x of courses) {
+      const get_course_id_args = [String(x.department.toUpperCase()), String(x.course_number.toUpperCase()), String(x.section.toUpperCase())]
+      await me.query(insert_into_saved_courses, get_course_id_args)
+      const my_course_id = await me.query(fetch_course_id, get_course_id_args)
+      course_ids.push(my_course_id.rows[0])
+    }
+
+    // clear current db copy of schedule
+    await me.query(clear_course_collection_items, [user_id, semester, int_year])
+    // save new schedule to db
+    for (let i of course_ids) {
+      await me.query(insert_into_course_collection_items, [user_id, semester, int_year, i.course_id])
+    }
+
+    // update availability
+    await me.query(update_availability, [user_id, availability])
+
+    // yippee
+    await me.query('COMMIT TRANSACTION')
+
+    // read
+    const taken = (await me.query(show_taken, [user_id, int_year, semester])).rows
+    const campus_schedule = (await me.query(show_availability, [user_id])).rows[0].campus_schedule
+
+    // share
+    return res.status(201).json({ taking: taken, campus_schedule: campus_schedule })
+  } catch (e) {
+    await me.query('ROLLBACK TRANSACTION')
+    if (isBadInputError(e)) {
+      return res.status(400).json({ message: e.message })
+    } else {
+      console.log(e)
+      return res.status(500).json({ message: 'failed' })
+    }
+  } finally {
+    me.release()
+  }
+
 }
