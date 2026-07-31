@@ -33,7 +33,7 @@ export function ScheduleBuilder() {
   return (
     <div className='bootstrap-scope'>
       <Container><Row><Col xs={4} sm={4}>
-        <Link to='/userprofile' className='bs-extended-router-link form-control mb-3'
+        <Link to='/userprofile' className='bs-extended-router-link form-control m-3'
         >Return To Home</Link>
       </Col></Row></Container>
       <Form>
