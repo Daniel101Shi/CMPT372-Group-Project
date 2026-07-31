@@ -108,10 +108,13 @@ async function addPack() {
     [ids.daniel, "Study Crew", SEMESTER, YEAR],
   );
 
-  await pool.query(
-    `INSERT INTO pack_members (pack_id, user_id) VALUES ($1, $2), ($1, $3), ($1, $4)`,
-    [rows[0].pack_id, ids.priya, ids.ellie, ids.marcus],
-  );
+  // priya and ellie only. marcus has a request in but daniel hasn't accepted it, and
+  // createPack rejects non-friends, so putting him here would be data the app can't make.
+  await pool.query(`INSERT INTO pack_members (pack_id, user_id) VALUES ($1, $2), ($1, $3)`, [
+    rows[0].pack_id,
+    ids.priya,
+    ids.ellie,
+  ]);
 
   console.log("Pack added.");
 }

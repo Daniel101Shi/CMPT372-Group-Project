@@ -86,7 +86,9 @@ vi.mock('../db/packHelpers.js', () => ({
         deletePack: vi.fn(),
         editPack: vi.fn(),
         getPackMembersUserInfo: vi.fn(),
-        getPackOwnersInfo: vi.fn()
+        getPackOwnersInfo: vi.fn(),
+        // [] means "everyone you named is a friend", so the happy path stays happy
+        getNonFriendIds: vi.fn().mockResolvedValue([])
     }
 }));
 
