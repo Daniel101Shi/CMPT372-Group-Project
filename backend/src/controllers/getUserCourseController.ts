@@ -1,23 +1,31 @@
 import type { Request, Response } from "express";
-
 import { pool } from "../db/db.js";
 
+// current year is hard coded.
 export const CURRENT_YEAR = "2026";
 
-export type Term = "spring" | "summer" | "fall";
+export const VALID_TERMS = ["spring", "summer", "fall"] as const;
+export type Term = (typeof VALID_TERMS)[number];
 
-export const VALID_TERMS: Term[] = ["spring", "summer", "fall"];
 
+// Helper functions
 export function isTerm(value: string): value is Term {
-  return (VALID_TERMS as string[]).includes(value);
+  return (VALID_TERMS as readonly string[]).includes(value);
 }
+
 
 export function parseTermParam(req: Request): string {
   const rawTerm = req.params.term;
-  return Array.isArray(rawTerm) ? (rawTerm[0] ?? "") : (rawTerm ?? "");
+
+  // Express can parse a repeated param (e.g. ?term=a&term=b) as an array.
+  if (Array.isArray(rawTerm)) {
+    return rawTerm[0] ?? "";
+  }
+
+  return rawTerm ?? "";
 }
 
-function getSessionUserId(req: Request, res: Response) {
+export function getSessionUserId(req: Request, res: Response) {
   const userId = req.session.userId;
 
   if (!userId) {
@@ -80,6 +88,7 @@ type SavedCourseRow = {
   section: string;
 };
 
+// helper function that get courses for a ANY user and term
 export async function fetchCoursesForUser(userId: number, term: Term) {
   const coursesResult = await pool.query<SavedCourseRow>(
     `
@@ -132,6 +141,8 @@ export async function getUserCourse(req: Request, res: Response) {
       },
     });
   }
+
+  // end authentication
 
   try {
     const courses = await fetchCoursesForUser(sessionUserId, term);

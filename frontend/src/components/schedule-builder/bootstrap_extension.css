@@ -1,0 +1,55 @@
+.bootstrap-scope .bs-extended-cell-hover td:first-child {
+    background-color: inherit
+}
+
+.bootstrap-scope td.bs-extended-on-cell:hover {
+    background-color: lightpink;
+    border-color: lightpink;
+    border-width: 1px;
+}
+
+.bootstrap-scope td.bs-extended-off-cell:hover {
+    background-color: orange;
+    border-color: orange;
+    border-width: 1px;
+}
+
+.bootstrap-scope td.bs-extended-on-cell {
+    background-color: pink;
+    border-color: pink;
+    border-width: 1px;
+}
+
+.bootstrap-scope td.bs-extended-off-cell {
+    background-color: darkorange;
+    border-color: darkorange;
+    border-width: 1px;
+}
+
+.bootstrap-scope .bs-extended-vertically-scrollable-container {
+    height: 50vh;
+    max-height: 50vh;
+    overflow-y: scroll;
+    border-style: solid;
+    border-width: 1px;
+}
+
+.bootstrap-scope .bs-extended-router-link { /* ripped from auth page styles :p */
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 46px;
+    padding: 0 18px;
+    border-radius: 12px;
+    background-color: #2563eb;
+    color: #ffffff;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    border: none;
+    box-Shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+}
+
+.bootstrap-scope .bs-extended-button { /* give each button the same shadow as the link */
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
+}

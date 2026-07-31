@@ -11,6 +11,7 @@ import userRoutes from "./routes/userRoutes.js";
 // getUserCourse
 import getUserCourseRoutes from "./routes/getUserCourseRoutes.js";
 import getFriendCourseRoutes from "./routes/getFriendCourseRoutes.js";
+import { scheduleRoutes } from "./routes/scheduleRoutes.js";
 
 import { testConnection, shutdown } from "./db/testDB.js";
 
@@ -53,6 +54,7 @@ app.use("/api", userRoutes);
 // getUserCourse
 app.use("/api", getUserCourseRoutes);
 app.use("/api", getFriendCourseRoutes);
+app.use("/api", scheduleRoutes);
 
 
 
