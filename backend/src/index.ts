@@ -6,6 +6,7 @@ import session from "express-session";
 
 import { pool } from "./db/db.js";
 
+import adminRoutes from "./routes/adminRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
 import friendshipRoutes from "./routes/friendshipRoutes.js";
 import packRoutes from "./routes/packRoutes.js"
@@ -68,6 +69,9 @@ app.get("/health", (_req, res) => {
   res.status(200).json({ status: "ok" });
 });
 
+// mounted on its own prefix, not "/api", because adminRoutes gates itself with a bare
+// router.use() that would otherwise apply to every /api request
+app.use("/api/admin", adminRoutes);
 app.use("/api", authRoutes);
 app.use("/api", friendshipRoutes);
 app.use("/api", packRoutes);
