@@ -15,6 +15,7 @@ const USERS = [
   { username: "daniel", contact: "daniel@sfu.ca", role: "user" },
   { username: "priya", contact: "priya@sfu.ca", role: "user" },
   { username: "marcus", contact: "marcus@sfu.ca", role: "user" },
+  { username: "ellie", contact: "ellie@sfu.ca", role: "user" },
 ];
 
 // deliberately overlapping so the pack heatmap has something to show.
@@ -25,6 +26,7 @@ const COURSES: Record<string, string[][]> = {
   daniel: [["CMPT", "354", "D100"], ["CMPT", "276", "D100"], ["MACM", "201", "D100"]],
   priya: [["CMPT", "354", "D100"], ["CMPT", "225", "D100"]],
   marcus: [["CMPT", "276", "D100"], ["STAT", "270", "D100"]],
+  ellie: [["CMPT", "354", "D100"], ["CMPT", "213", "D100"], ["MACM", "201", "D100"]],
 };
 
 const ids: Record<string, number> = {};
@@ -65,9 +67,10 @@ async function addFriendships() {
   await pool.query(
     `INSERT INTO friendships (user_id_1, user_id_2, pending) VALUES
        ($1, $2, FALSE),
+       ($1, $5, FALSE),
        ($3, $1, TRUE),
        ($1, $4, TRUE)`,
-    [ids.daniel, ids.priya, ids.marcus, ids.admin],
+    [ids.daniel, ids.priya, ids.marcus, ids.admin, ids.ellie],
   );
 
   console.log("Friendships added.");
@@ -105,11 +108,10 @@ async function addPack() {
     [ids.daniel, "Study Crew", SEMESTER, YEAR],
   );
 
-  await pool.query(`INSERT INTO pack_members (pack_id, user_id) VALUES ($1, $2), ($1, $3)`, [
-    rows[0].pack_id,
-    ids.priya,
-    ids.marcus,
-  ]);
+  await pool.query(
+    `INSERT INTO pack_members (pack_id, user_id) VALUES ($1, $2), ($1, $3), ($1, $4)`,
+    [rows[0].pack_id, ids.priya, ids.ellie, ids.marcus],
+  );
 
   console.log("Pack added.");
 }
