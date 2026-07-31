@@ -44,6 +44,24 @@ const authErrors = {
             },
         });
     },
+    
+    unauthorizedResponse: (res: Response): Response => {
+        return res.status(401).json({
+            error: {
+                code: "UNAUTHORIZED",
+                message: "You must be logged in.",
+            },
+        });
+    },
+
+    forbiddenResponse: (res: Response): Response => {
+        return res.status(403).json({
+            error: {
+                code: "FORBIDDEN",
+                message: "You do not have permission to perform this action.",
+            },
+        });
+    },
 
     failedLogoutResponse: (res: Response): Response => {
         return res.status(500).json({
