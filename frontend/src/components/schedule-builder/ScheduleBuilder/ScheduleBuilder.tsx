@@ -98,7 +98,7 @@ export function ScheduleBuilder() {
                       <tr key={i}>
                         <td>{get_time_string_from_i(i)}</td>
                         {Array.from({ length: 7 }, (_, j) =>
-                          <td key={j} className={current_interface.campus_schedule[(i * 7) + j] == '1' ? 'bs-extended-on-cell' : 'bs-extended-off-cell'}>{current_interface.campus_schedule[i * 7 + j] == '1' ? 'o' : 'x'}</td>
+                          <td key={j} className={current_interface.campus_schedule[i + (j * 48)] == '1' ? 'bs-extended-on-cell' : 'bs-extended-off-cell'}>{current_interface.campus_schedule[i + (j * 48)] == '1' ? 'o' : 'x'}</td>
                         )}
                       </tr>)}
                   </tbody>
@@ -133,7 +133,7 @@ export function ScheduleBuilder() {
                       <tr key={i}>
                         <td>{get_time_string_from_i(i)}</td>
                         {Array.from({ length: 7 }, (_, j) =>
-                          <td key={j} className={free_time[(i * 7) + j] == '1' ? 'bs-extended-on-cell' : 'bs-extended-off-cell'} onClick={() => { free_time_setter(prev => prev.map((x, k) => k == (i * 7) + j ? x == '0' ? '1' : '0' : x)) }}>{free_time[i * 7 + j] == '1' ? 'o' : 'x'}</td>
+                          <td key={j} className={free_time[i + (j * 48)] == '1' ? 'bs-extended-on-cell' : 'bs-extended-off-cell'} onClick={() => { free_time_setter(prev => prev.map((x, k) => k == i + (j * 48) ? x == '0' ? '1' : '0' : x)) }}>{free_time[i + (j * 48)] == '1' ? 'o' : 'x'}</td>
                         )}
                       </tr>)}
                   </tbody>
