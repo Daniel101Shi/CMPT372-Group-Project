@@ -22,8 +22,9 @@ export const RegisterPage: React.FC = () => {
       return;
     }
 
-    if (password.length < 4) {
-      setError("Password must be at least 4 characters long.");
+    // keep in sync with PASSWORD_MIN in backend/src/controllers/validation/auth.ts
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters long.");
       return;
     }
 

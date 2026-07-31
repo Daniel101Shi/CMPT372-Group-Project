@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { readApiError } from "../../utils/apiError";
 import {
     Button,
     Card,
@@ -57,7 +58,7 @@ export function CreatePack({createNewPack, semester, year, setSemester, setYear}
             const data = await response.json();
         
             if (!response.ok) {
-                throw new Error(data.error.message || "Failed to load friendships.");
+                throw new Error(readApiError(data, "Failed to load friendships."));
             }
 
             if(!Array.isArray(data.currentFriends)){
