@@ -1,6 +1,7 @@
 import type { Response } from "express";
 
 const packsErrors = {
+
     invalidOwnerIdResponse: (res: Response) : Response => {
         return res.status(400).json({
             error:{
@@ -30,7 +31,7 @@ const packsErrors = {
     invalidOwnerResponse: (res: Response) : Response => {
         return res.status(400).json({
             error:{
-                code: "INVALID_OWNER_ID",
+                code: "INVALID_OWNERSHIP",
                 message: "This user doesn't own the requested pack."
             }
         });
