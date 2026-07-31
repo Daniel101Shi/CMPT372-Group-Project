@@ -3,7 +3,6 @@ import { type PackID, type Pack, type PackMember} from "../types/Pack.js";
 import { type UserInfo } from "../types/User.js";
 import { packHelpers } from "../db/packHelpers.js"
 import { packsErrors } from "../error_messages/packs.js";
-import { getRandomCampusSchedule, printCampusScheduleGrid } from "../mocks/schedules.js";
 import { packValidation } from "./validation/packs.js";
 
 
@@ -31,11 +30,6 @@ export const getPackData = async(req: Request, res: Response): Promise<Response>
 
         const owner_info : UserInfo = await packHelpers.getPackOwnersInfo(owner_id);
         const pack_members_info : UserInfo[] = await packHelpers.getPackMembersUserInfo(pack_id);
-        
-        owner_info.campus_schedule = getRandomCampusSchedule();
-        for(const member of pack_members_info){
-            member.campus_schedule = getRandomCampusSchedule();
-        } 
         
         const pack_data = [owner_info, ...pack_members_info];
 
