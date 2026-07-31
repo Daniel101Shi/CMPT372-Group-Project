@@ -3,8 +3,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { type Pack, type PackMember } from "../types/Pack.js";
 import { packHelpers } from "../db/packHelpers.js";
 import { type UserInfo } from "../types/User.js";
-import { getRandomCampusSchedule } from "../mocks/schedules.js";
-import { getPackData } from "./packController.js";
 import express from "express";
 import session from "express-session";
 import packRoutes from "../routes/packRoutes.js";
