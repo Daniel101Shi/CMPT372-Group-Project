@@ -5,6 +5,9 @@
 
 -- note: we can consider changing some of the varchar's to smaller/bigger allowances, or just use TEXT
 
+-- there is also a "session" table that isn't defined here. connect-pg-simple owns it and
+-- creates it on boot, so we don't hand write the ddl for it.
+
 -- user entity
 CREATE TABLE users (
     user_id SERIAL PRIMARY KEY,

@@ -1,7 +1,10 @@
+import connectPgSimple from "connect-pg-simple";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
 import session from "express-session";
+
+import { pool } from "./db/db.js";
 
 import authRoutes from "./routes/authRoutes.js";
 import friendshipRoutes from "./routes/friendshipRoutes.js";
@@ -17,6 +20,15 @@ import { testConnection, shutdown } from "./db/testDB.js";
 
 dotenv.config();
 
+const isProduction = process.env.NODE_ENV === "production";
+
+// no fallback in production. a default secret means anyone who has read the source can forge
+// a session cookie, so we refuse to boot instead of silently running insecurely.
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret && isProduction) {
+  throw new Error("SESSION_SECRET must be set when NODE_ENV=production");
+}
+
 const app = express();
 const port = Number(process.env.PORT ?? 3001);
 
@@ -28,16 +40,26 @@ app.use(
 );
 app.use(express.json());
 
+// sessions live in postgres, not in memory. the default MemoryStore drops every session on
+// restart (so everyone gets logged out on a redeploy) and leaks memory as sessions pile up.
+const PgSession = connectPgSimple(session);
+
 app.use(
   session({
-    secret: process.env.SESSION_SECRET || "lopo-super-secure-secret-key",
+    store: new PgSession({
+      pool,
+      tableName: "session",
+      createTableIfMissing: true,
+      pruneSessionInterval: 60 * 60, // clean out expired rows hourly
+    }),
+    secret: sessionSecret || "lopo-dev-only-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production",
+      secure: isProduction,
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+      sameSite: isProduction ? "none" : "lax",
     },
   })
 );
