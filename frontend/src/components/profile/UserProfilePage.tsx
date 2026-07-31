@@ -489,6 +489,14 @@ export const UserProfilePage: React.FC = () => {
                   >
                     Open schedule viewer
                   </Link>
+                  {user?.role === "admin" && (
+                    <Link
+                      to="/admin"
+                      style={{ ...styles.secondaryButton, ...styles.linkButton }}
+                    >
+                      Admin panel
+                    </Link>
+                  )}
                 <button type="button" onClick={handleLogout} style={styles.secondaryButton}>
                   Log out
                 </button>

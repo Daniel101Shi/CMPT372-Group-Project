@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 
 import { readApiError } from "../utils/apiError";
 
+export type Role = "user" | "admin";
+
 //matches sql schema
 export interface User {
   user_id: number;
@@ -9,6 +11,7 @@ export interface User {
   contact_info?: string | null;
   campus_schedule?: string;
   created_at?: string;
+  role?: Role;
 }
 
 interface AuthContextType {

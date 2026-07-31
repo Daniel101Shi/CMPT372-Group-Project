@@ -6,6 +6,7 @@ import { ScheduleBuilderComponent } from "./components/schedule-builder/Schedule
 import { ScheduleViewerComponent } from "./components/schedule-viewer/ScheduleViewerComponent";
 import { UserProfilePage } from "./components/profile/UserProfilePage";
 import { PackPage } from "./components/packs/PackPage";
+import { AdminPage } from "./components/admin/AdminPage";
 import { Toaster } from "sonner";
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
@@ -26,6 +27,23 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   return user ? <>{children}</> : <Navigate to="/" replace />;
+}
+
+// Hides the admin page from anyone who isn't an admin. This is only for the UI: the real
+// enforcement is requireRole on the server, which rejects the request no matter what the
+// browser thinks.
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
+  if (!user) {
+    return <Navigate to="/" replace />;
+  }
+
+  return user.role === "admin" ? <>{children}</> : <Navigate to="/userprofile" replace />;
 }
 
 export function App() {
@@ -100,13 +118,14 @@ export function App() {
             }
           />
           <Route
-            path="/register"
+            path="/admin"
             element={
-              <PublicOnlyRoute>
-                <RegisterPage />
-              </PublicOnlyRoute>
+              <AdminRoute>
+                <AdminPage />
+              </AdminRoute>
             }
           />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
