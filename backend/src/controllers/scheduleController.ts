@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { schedule_db_surface } from "../db/schedule_db_surface.js";
 
 import { pool } from "../db/db.js";
 
@@ -15,61 +16,6 @@ function isBadInputError(error: unknown): error is BadInputError {
 }
 //
 
-// queries
-const insert_into_course_collections = `
-INSERT INTO course_collections (user_id, semester, year)
-SELECT $1, $2::VARCHAR, $3
-WHERE 0 = (
-    SELECT COUNT(user_id)
-    FROM course_collections
-    WHERE user_id = $1 AND semester = $2 AND year = $3
-)`
-
-const insert_into_saved_courses = `
-INSERT INTO saved_courses (department, course_number, section)
-SELECT $1::VARCHAR, $2::VARCHAR, $3::VARCHAR
-WHERE 0 = (
-    SELECT COUNT(course_id)
-    FROM saved_courses
-    WHERE department = $1 AND course_number = $2 AND section = $3
-)`
-
-const fetch_course_id = `
-SELECT course_id
-FROM saved_courses
-WHERE department = $1 AND course_number = $2 AND section = $3
-`
-
-const clear_course_collection_items = `
-DELETE FROM course_collection_items
-WHERE user_id = $1 AND semester = $2 AND year = $3
-`
-
-const insert_into_course_collection_items = `
-INSERT INTO course_collection_items (user_id, semester, year, course_id)
-VALUES ($1, $2, $3, $4)
-`
-
-const update_availability = `
-UPDATE users
-SET campus_schedule = $2
-WHERE user_id = $1
-`
-
-const show_taken = `
-SELECT department, course_number, section
-FROM course_collection_items JOIN saved_courses
-ON course_collection_items.course_id = saved_courses.course_id
-WHERE user_id = $1 AND year = $2 AND semester = $3
-`
-
-const show_availability = `
-SELECT campus_schedule
-FROM users
-WHERE user_id = $1
-`
-//
-
 export async function fetch_schedule(req: Request, res: Response) {
   const me = await pool.connect()
   try {
@@ -81,13 +27,12 @@ export async function fetch_schedule(req: Request, res: Response) {
 
     // checks
     // assert that the session userID is the userID of the signed in user
+    if (req.session.userId === undefined) { throw new BadInputError('unauthorised') }
     if (!/^\d+$/.test(str_year)) { throw new BadInputError(`invalid year: ${str_year}`) }
     if (semester != 'fall' && semester != 'summer' && semester != 'spring') { throw new BadInputError(`invalid semester: ${semester}`) }
-    if (req.session.userId === undefined) { throw new BadInputError('request missing target user') }
 
     // read
-    const taken = (await me.query(show_taken, [user_id, int_year, semester])).rows
-    const campus_schedule = (await me.query(show_availability, [user_id])).rows[0].campus_schedule
+    const {taken, campus_schedule} = await schedule_db_surface.fetch_schedule({user_id, int_year, semester, me})
 
     // share
     return res.status(200).json({ taking: taken, campus_schedule: campus_schedule })
@@ -107,19 +52,19 @@ export async function upload_schedule(req: Request, res: Response) {
   const me = await pool.connect()
   try {
     await me.query('BEGIN TRANSACTION')
-    if (req.session.userId === undefined) { throw new BadInputError('unauthorised') }
     let user_id = Number(req.session.userId)
     let str_year = String(req.params.year)
     let int_year = Number(str_year)
-    let semester = String(req.params.semester)
+    let semester = String(req.params.semester).toLowerCase()
     let courses: { department: string, course_number: string, section: string }[] = req.body.courses ?? []
-    let availability: string = req.body.availability
+    let availability: string = String(req.body.availability)
     // checks
     // assert that the session userID is the userID of the signed in user to prevent editing cookies allowing you to set anyones schedule
+    if (req.session.userId === undefined) { throw new BadInputError('unauthorised') }
     if (!/^\d+$/.test(str_year)) { throw new BadInputError(`invalid year: ${str_year}`) }
     if (semester != 'fall' && semester != 'summer' && semester != 'spring') { throw new BadInputError(`invalid semester: ${semester}`) }
-    if (req.session.userId === undefined) { throw new BadInputError('request missing target user') }
-    if (availability.length != 7 * 48) { throw new BadInputError(`availability must be 336 characters`) }
+    if (availability.length != 7 * 48) { throw new BadInputError(`availability must be 336 = 7 * 48 characters`) }
+    if (!/^[01]+$/.test(availability)) { throw new BadInputError(`availability must be only '0's and '1's`) }
     
     courses.forEach(x => {
       if (x.department.length > 10) { throw new BadInputError(`department: ${x.department}, data to big to fit in schema`) }
@@ -127,35 +72,27 @@ export async function upload_schedule(req: Request, res: Response) {
       if (x.section.length > 10) { throw new BadInputError(`section: ${x.section}, data to big to fit in schema`) }
     })
 
-    // create an entry in the course_collections table signifying user X has a schedule for semester S and year Y
-    await me.query(insert_into_course_collections, [user_id, semester, int_year])
-
     // create an entry in the saved_courses table for any new_course
     // get the id of each passed course (get course_id_i for each course_i of request) 
-    let course_ids = []
+    let course_ids: number[] = []
     for (let x of courses) {
-      const get_course_id_args = [String(x.department.toUpperCase()), String(x.course_number.toUpperCase()), String(x.section.toUpperCase())]
-      await me.query(insert_into_saved_courses, get_course_id_args)
-      const my_course_id = await me.query(fetch_course_id, get_course_id_args)
-      course_ids.push(my_course_id.rows[0])
+      let clean_x = {
+        department: x.department.trim().toUpperCase(),
+        course_number: x.course_number.trim().toUpperCase(),
+        section: x.section.trim().toUpperCase()} 
+      let {course_id} = await schedule_db_surface.saved_courses_checked_insert({...clean_x, me}) // my brain only now has made the connection that i could use the spread operator like this
+      course_ids.push(course_id)
     }
 
-    // clear current db copy of schedule
-    await me.query(clear_course_collection_items, [user_id, semester, int_year])
-    // save new schedule to db
-    for (let i of course_ids) {
-      await me.query(insert_into_course_collection_items, [user_id, semester, int_year, i.course_id])
-    }
-
-    // update availability
-    await me.query(update_availability, [user_id, availability])
+    // mutate db state
+    await schedule_db_surface.set_course_schedule({course_ids, user_id, int_year, semester, me})
+    await schedule_db_surface.set_availability({availability, user_id, int_year, semester, me})
 
     // yippee
     await me.query('COMMIT TRANSACTION')
 
     // read
-    const taken = (await me.query(show_taken, [user_id, int_year, semester])).rows
-    const campus_schedule = (await me.query(show_availability, [user_id])).rows[0].campus_schedule
+    const {taken, campus_schedule} = await schedule_db_surface.fetch_schedule({user_id, int_year, semester, me})
 
     // share
     return res.status(201).json({ taking: taken, campus_schedule: campus_schedule })
@@ -170,5 +107,4 @@ export async function upload_schedule(req: Request, res: Response) {
   } finally {
     me.release()
   }
-
 }
