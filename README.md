@@ -5,7 +5,7 @@ CMPT 372, Group 9.
 | | |
 |---|---|
 | Repository | https://github.com/Daniel101Shi/CMPT372-Group-Project |
-| Deployed app | http://35.247.26.149/ |
+| Deployed app |  http://136.66.216.106:5173/ |
 | GCP project ID | `andy-wang-372` |
 
 Daniel Shi, Abdi, Andy Wang, Nico, Eshean.
